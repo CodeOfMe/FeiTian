@@ -64,8 +64,8 @@ class App(ShowBase):
     def _build_setup(self):
         bg=(.08,.08,.18,1);fg=(1,1,1,1);ac=(.97,.52,.12,1);dk=(.12,.12,.24,1);tx=(.6,.6,.7,1)
         # Title
-        DirectLabel(text="FeiTian 飞天",scale=.12,pos=(0,0,.85),text_fg=ac,text_font=self.defaultFont,frameColor=(0,0,0,0))
-        DirectLabel(text="FPV Drone Flight Simulator",scale=.05,pos=(0,0,.76),text_fg=tx,text_font=self.defaultFont,frameColor=(0,0,0,0))
+        DirectLabel(text="FeiTian 飞天",scale=.12,pos=(0,0,.85),text_fg=ac,frameColor=(0,0,0,0))
+        DirectLabel(text="FPV Drone Flight Simulator",scale=.05,pos=(0,0,.76),text_fg=tx,frameColor=(0,0,0,0))
 
         # Device list
         DirectLabel(text="控制器",scale=.06,pos=(-.65,0,.66),text_fg=fg,text_align=TextNode.A_left,frameColor=(0,0,0,0))

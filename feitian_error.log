@@ -1,0 +1,22 @@
+Known pipe types:
+  wglGraphicsPipe
+(all display modules loaded.)
+:text(warning): No definition in  for character U+98de
+:text(warning): No definition in  for character U+5929
+:text(warning): No definition in  for character U+63a7
+:text(warning): No definition in  for character U+5236
+:text(warning): No definition in  for character U+5668
+Traceback (most recent call last):
+  File "C:\Users\frede\Documents\GitHub\CodeOfMe\FlyingDream\feitian\app.py", line 326, in main
+    app=App();app.run()
+        ^^^^^
+  File "C:\Users\frede\Documents\GitHub\CodeOfMe\FlyingDream\feitian\app.py", line 60, in __init__
+    self._build_setup()
+  File "C:\Users\frede\Documents\GitHub\CodeOfMe\FlyingDream\feitian\app.py", line 73, in _build_setup
+    self.dlist=DirectScrolledList(
+               ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\frede\AppData\Roaming\Python\Python312\site-packages\direct\gui\DirectScrolledList.py", line 122, in __init__
+    self.initialiseoptions(DirectScrolledList)
+  File "C:\Users\frede\AppData\Roaming\Python\Python312\site-packages\direct\gui\DirectGuiBase.py", line 279, in initialiseoptions
+    raise KeyError(text + ', '.join(unusedOptions) + \
+KeyError: 'Unknown option "highlightColor" for DirectScrolledList'
