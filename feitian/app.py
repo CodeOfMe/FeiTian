@@ -129,6 +129,15 @@ class Setup:
 # FLIGHT (Panda3D — Z-up)
 # ═══════════════════════════════════════════════════════════
 def flight():
+    try:
+        _flight()
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        tk.messagebox.showerror("FeiTian 错误", f"飞行启动失败:\n{e}")
+        sys.exit(1)
+
+def _flight():
     from panda3d.core import (load_prc_file_data, Vec3, Vec4, Point3, AmbientLight,
         DirectionalLight, TextNode, TransparencyAttrib, CardMaker, NodePath, PandaNode,
         LVector3, Texture, Filename, GeomVertexFormat, GeomVertexData, Geom, GeomTriangles,
@@ -271,4 +280,11 @@ def flight():
     App().run()
 
 def main():
-    Setup()
+    try:
+        Setup()
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        import tkinter.messagebox as mb
+        mb.showerror("FeiTian 错误", f"启动失败:\n{e}")
+        sys.exit(1)
