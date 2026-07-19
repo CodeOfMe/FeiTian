@@ -52,6 +52,6 @@ button:hover{background:#2d2d52}
 /* ── Flight ── */
 #flight{position:fixed;inset:0;background:#0a0a1a}
 #cvs{display:block;width:100%;height:100%}
-#hud{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:30px;z-index:10;pointer-events:none}
-.hud-row{display:flex;gap:24px;font-family:Consolas,monospace;font-size:1.1rem;color:#fff;background:rgba(0,0,0,.5);padding:6px 16px;border-radius:8px}
-.hud-info{font-size:.7rem;color:var(--t2);pointer-events:none;position:fixed;bottom:6px;left:50%;transform:translateX(-50%)}
+#hud{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);display:flex;gap:20px;z-index:10;pointer-events:none}
+.hud-row{display:flex;gap:28px;font-family:Consolas,monospace;font-size:1.2rem;color:#fff;background:rgba(0,0,0,.55);padding:8px 20px;border-radius:10px;border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(4px)}
+.hud-info{font-size:.68rem;color:rgba(255,255,255,.4);pointer-events:none;position:fixed;bottom:8px;left:50%;transform:translateX(-50%)}
