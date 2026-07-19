@@ -234,17 +234,24 @@ def flight():
     class App(ShowBase):
         def __init__(self):
             ShowBase.__init__(self)
-            self.setBackgroundColor(.53, .81, .94, 1); self.disableMouse()
-            al = AmbientLight('al'); al.setColor(Vec4(.45, .5, .55, 1))
-            dl = DirectionalLight('dl'); dl.setColor(Vec4(1, .95, .8, 1))
-            dln = self.render.attachNewNode(dl); dln.setHpr(45, -40, 0)
-            self.render.setLight(self.render.attachNewNode(al)); self.render.setLight(dln)
+            self.setBackgroundColor(.35, .5, .7, 1); self.disableMouse()
 
-            for c, h in [(Vec4(.53, .81, .94, 1), .1), (Vec4(.7, .9, 1, 1), .45), (Vec4(.4, .6, .8, 1), 1)]:
-                cm = CardMaker('sky'); cm.setFrame(-600, 600, -600, 600)
-                n = self.render.attachNewNode(cm.generate()); n.setPos(0, 0, h * 400); n.setColor(c)
+            # Lighting
+            al = AmbientLight('al'); al.setColor(Vec4(.4, .45, .5, 1))
+            dl = DirectionalLight('dl'); dl.setColor(Vec4(1.2, 1.1, .9, 1))
+            dln = self.render.attachNewNode(dl); dln.setHpr(60, -35, 0)
+            dl2 = DirectionalLight('dl2'); dl2.setColor(Vec4(.3, .35, .45, 1))
+            dl2n = self.render.attachNewNode(dl2); dl2n.setHpr(-60, 20, 0)
+            self.render.setLight(self.render.attachNewNode(al))
+            self.render.setLight(dln); self.render.setLight(dl2n)
+
+            # Sky gradient (layered planes)
+            for c, h in [(Vec4(.4, .6, .85, 1), .05), (Vec4(.55, .75, .95, 1), .3), (Vec4(.7, .85, 1, 1), .6), (Vec4(.3, .4, .55, 1), 1)]:
+                cm = CardMaker('sky'); cm.setFrame(-700, 700, -700, 700)
+                n = self.render.attachNewNode(cm.generate()); n.setPos(0, 0, h * 500); n.setColor(c)
                 n.setBin('background', 0); n.setDepthWrite(False)
 
+            # Terrain with texture
             fmt = GeomVertexFormat.getV3n3cpt2()
             vdata = GeomVertexData('terrain', fmt, Geom.UHStatic); vdata.setNumRows(RES * RES)
             vtx = GeomVertexWriter(vdata, 'vertex'); nrm = GeomVertexWriter(vdata, 'normal')
@@ -252,8 +259,8 @@ def flight():
             for y in range(RES):
                 for x in range(RES):
                     px = (x / (RES - 1) - .5) * SIZE; py = (y / (RES - 1) - .5) * SIZE; pz = heights[y, x]
-                    vtx.addData3f(px, py, pz); txc.addData2f(x / (RES - 1) * 30, y / (RES - 1) * 30)
-                    clr.addData4f(.2 + pz * .02, .5 + pz * .03, .15 + pz * .01, 1)
+                    vtx.addData3f(px, py, pz); txc.addData2f(x / (RES - 1) * 40, y / (RES - 1) * 40)
+                    shade = .7 + .3 * (pz / 15); clr.addData4f(.18 * shade, .42 * shade, .1 * shade, 1)
             for _ in range(RES * RES): nrm.addData3f(0, 0, 1)
             tris = GeomTriangles(Geom.UHStatic)
             for y in range(RES - 1):
@@ -261,50 +268,90 @@ def flight():
                     a = y * RES + x; b = a + 1; c = a + RES; d = c + 1
                     tris.addVertices(a, b, c); tris.addVertices(b, d, c)
             geom = Geom(vdata); geom.addPrimitive(tris)
-            tnode = GeomNode('terrain'); tnode.addGeom(geom)
-            self.render.attachNewNode(tnode).setPos(-SIZE / 2, -SIZE / 2, 0)
+            tn = GeomNode('terrain'); tn.addGeom(geom)
+            self.render.attachNewNode(tn).setPos(-SIZE / 2, -SIZE / 2, 0)
 
-            for r in range(6):
-                cm = CardMaker('pad'); cm.setFrame(-3, 3, -3, 3)
-                p = self.render.attachNewNode(cm.generate()); p.setPos(0, 0, .005 + r * .002); p.setColor(.4 + .1 * r, .4 + .1 * r, .4 + .1 * r)
-            rcm = CardMaker('ring'); rcm.setFrame(-2.8, 2.8, -2.8, 2.8)
-            ring = self.render.attachNewNode(rcm.generate()); ring.setPos(0, 0, .02); ring.setColor(.9, .9, .9)
+            # Launch pad
+            for i in range(8):
+                cm = CardMaker('pad'); cm.setFrame(-3.5, 3.5, -3.5, 3.5)
+                p = self.render.attachNewNode(cm.generate()); p.setPos(0, 0, .005 + i * .0015)
+                p.setColor(.35 + .06 * i, .35 + .06 * i, .35 + .06 * i)
+            rcm = CardMaker('ring'); rcm.setFrame(-3.2, 3.2, -3.2, 3.2)
+            self.render.attachNewNode(rcm.generate()).setPos(0, 0, .02); self.render.attachNewNode(rcm.generate()).setColor(.95, .95, .95)
 
-            for _ in range(120):
-                tx = (random.random() - .5) * 450; ty = (random.random() - .5) * 450
-                if math.sqrt(tx * tx + ty * ty) < 20: continue
+            # Trees using cylinder + sphere primitives
+            for _ in range(100):
+                tx = (random.random() - .5) * 460; ty = (random.random() - .5) * 460
+                if math.sqrt(tx * tx + ty * ty) < 22: continue
                 idx = int((ty / SIZE + .5) * RES); idy = int((tx / SIZE + .5) * RES)
                 hz = heights[min(idx, RES - 1), min(idy, RES - 1)] if 0 <= idx < RES and 0 <= idy < RES else 0
-                h = 1.5 + random.random() * 4; sh = .2 + .2 * random.random()
-                t = self.loader.loadModel("models/smiley"); t.setScale(.12, .12, h * .4); t.setPos(tx, ty, hz + h * .2); t.reparentTo(self.render)
-                c = self.loader.loadModel("models/smiley"); c.setScale(.5 + .6 * random.random()); c.setPos(tx, ty, hz + h * .7); c.reparentTo(self.render)
-                c.setColor(sh, .35 + sh, .05 + sh * .3)
+                h = 1.5 + random.random() * 4
+                trunk = self.loader.loadModel("models/cylinder")
+                trunk.setScale(.1, .1, h * .4); trunk.setPos(tx, ty, hz + h * .2); trunk.reparentTo(self.render)
+                trunk.setColor(.3, .2, .1)
+                crown = self.loader.loadModel("models/sphere")
+                cr = .5 + random.random() * .6
+                crown.setScale(cr, cr, cr); crown.setPos(tx, ty, hz + h * .75); crown.reparentTo(self.render)
+                sh = .25 + .3 * random.random()
+                crown.setColor(sh, .45 + sh * .3, .08)
 
-            self.drone = self.render.attachNewNode(PandaNode("drone"))
+            # ── Drone: real geometry ──
+            self.drone = NodePath(PandaNode("drone")); self.drone.reparentTo(self.render)
             hz0 = heights[RES // 2, RES // 2]; self.drone.setPos(0, 0, hz0 + 3)
-            hub = self.loader.loadModel("models/smiley"); hub.setScale(.3, .3, .12); hub.setPos(0, 0, .1); hub.setColor(.05, .05, .15); hub.reparentTo(self.drone)
-            self.rotors = []; rc_colors = [(1, .15, .15), (.15, 1, .15), (1, 1, .15), (.15, 1, 1)]
+
+            # Body
+            body = self.loader.loadModel("models/cylinder"); body.setScale(.22, .22, .08)
+            body.setPos(0, 0, .1); body.setColor(.08, .08, .18); body.reparentTo(self.drone)
+            top = self.loader.loadModel("models/sphere"); top.setScale(.18, .18, .06)
+            top.setPos(0, 0, .15); top.setColor(.12, .12, .22); top.reparentTo(self.drone)
+
+            # Arms: 4 rectangular bars
+            self.rotors = []
+            arm_colors = [(.9, .15, .15), (.15, .9, .15), (.9, .9, .15), (.15, .9, .9)]
             for i in range(4):
                 a = i * math.pi / 2; cx, cy = math.cos(a), math.sin(a)
-                arm = self.loader.loadModel("models/smiley"); arm.setScale(.05, .05, .45); arm.setPos(cx * .5, cy * .5, .13); arm.setH(i * 90); arm.setColor(.1, .1, .2); arm.reparentTo(self.drone)
-                motor = self.loader.loadModel("models/smiley"); motor.setScale(.14, .14, .06); motor.setPos(cx * .95, cy * .95, .15); motor.setColor(.3, .3, .35); motor.reparentTo(self.drone)
-                disc = self.loader.loadModel("models/smiley"); disc.setScale(.9, .9, .015); disc.setPos(cx * .95, cy * .95, .2)
-                disc.setColor(*rc_colors[i]); disc.setTransparency(TransparencyAttrib.MAlpha); disc.reparentTo(self.drone); self.rotors.append(disc)
-            for a in [.4, 2.3, 3.9, 5.5]:
+                arm = self.loader.loadModel("models/cylinder"); arm.setScale(.04, .04, .45)
+                arm.setPos(cx * .45, cy * .45, .12); arm.setHpr(i * 90, 90, 0)
+                arm.setColor(.1, .1, .22); arm.reparentTo(self.drone)
+                # Motor housing
+                motor = self.loader.loadModel("models/cylinder"); motor.setScale(.1, .1, .04)
+                motor.setPos(cx * .9, cy * .9, .14); motor.setColor(.25, .25, .3); motor.reparentTo(self.drone)
+                # Rotor disc
+                disc = self.loader.loadModel("models/cylinder"); disc.setScale(.65, .65, .008)
+                disc.setPos(cx * .9, cy * .9, .18)
+                disc.setColor(*arm_colors[i]); disc.setTransparency(TransparencyAttrib.MAlpha)
+                disc.reparentTo(self.drone); self.rotors.append(disc)
+                # Rotor guard ring
+                guard = self.loader.loadModel("models/cylinder"); guard.setScale(.02, .02, .65)
+                guard.setPos(cx * .9, cy * .9, .18); guard.setHpr(0, 90, 0)
+                guard.setColor(.6, .6, .6); guard.reparentTo(self.drone)
+
+            # Legs
+            for a in [.5, 2.6, 3.7, 5.8]:
                 cx, cy = math.cos(a), math.sin(a)
-                leg = self.loader.loadModel("models/smiley"); leg.setScale(.05, .05, .12); leg.setPos(cx * .22, cy * .22, -.05); leg.setColor(.1, .1, .1); leg.reparentTo(self.drone)
-            cam = self.loader.loadModel("models/smiley"); cam.setScale(.04, .04, .04); cam.setPos(.35, 0, .12); cam.setColor(0, 0, 0); cam.reparentTo(self.drone)
+                leg = self.loader.loadModel("models/cylinder"); leg.setScale(.03, .03, .1)
+                leg.setPos(cx * .2, cy * .2, -.04); leg.setColor(.08, .08, .08); leg.reparentTo(self.drone)
+            # FPV camera
+            cam = self.loader.loadModel("models/sphere"); cam.setScale(.03, .03, .03)
+            cam.setPos(.3, 0, .12); cam.setColor(0, 0, 0); cam.reparentTo(self.drone)
 
-            self.camera.setPos(0, -12, 6); self.camera.lookAt(0, 0, hz0 + 3); self.camMode = 'third'
+            # Camera
+            self.camera.setPos(0, -16, 8); self.camera.lookAt(0, 0, hz0 + 3)
+            self.camMode = 'third'
 
-            self.htn = TextNode('hud'); self.htn.setAlign(TextNode.A_center); self.htn.setTextColor(1, 1, 1, .88); self.htn.setShadow(.04, .04)
-            self.aspect2d.attachNewNode(self.htn).setScale(.06); self.aspect2d.attachNewNode(self.htn).setPos(0, 0, -.82)
-            self.hin = TextNode('hint'); self.hin.setAlign(TextNode.A_center); self.hin.setTextColor(1, 1, 1, .3)
-            self.hin.setText("V:View R:Reset Esc:Exit")
-            self.aspect2d.attachNewNode(self.hin).setScale(.04); self.aspect2d.attachNewNode(self.hin).setPos(0, 0, -.9)
+            # HUD
+            self.htn = TextNode('hud'); self.htn.setAlign(TextNode.A_center)
+            self.htn.setTextColor(1, 1, 1, .9); self.htn.setShadow(.04, .04)
+            self.aspect2d.attachNewNode(self.htn).setScale(.055); self.aspect2d.attachNewNode(self.htn).setPos(0, 0, -.82)
+            hin = TextNode('hint'); hin.setAlign(TextNode.A_center); hin.setTextColor(1, 1, 1, .25)
+            hin.setText("V:View  R:Reset  Esc:Exit")
+            self.aspect2d.attachNewNode(hin).setScale(.04); self.aspect2d.attachNewNode(hin).setPos(0, 0, -.9)
 
-            self.pos = Vec3(0, 0, hz0 + 3); self.vel = Vec3(0, 0, 0); self.rot = LVector3(0, 0, 0); self.avel = LVector3(0, 0, 0)
-            self.thr = [0, 0, 0, 0]; self.inp = {k: 0 for k in ['throttle', 'pitch', 'roll', 'yaw']}; self.keys = {}
+            # State
+            self.pos = Vec3(0, 0, hz0 + 3); self.vel = Vec3(0, 0, 0)
+            self.rot = LVector3(0, 0, 0); self.avel = LVector3(0, 0, 0)
+            self.thr = [0, 0, 0, 0]; self.inp = {k: 0 for k in ['throttle', 'pitch', 'roll', 'yaw']}
+            self.keys = {}
             self.accept('escape', sys.exit)
             self.accept('v', lambda: setattr(self, 'camMode', 'fpv' if self.camMode == 'third' else 'third'))
             self.accept('r', self._rst)
@@ -359,7 +406,7 @@ def flight():
                 h, p, r = self.rot.z * 57.3, self.rot.x * 57.3, self.rot.y * 57.3
                 m = Mat4.rotateMat(h, p, r); fwd = m.xformVec(Vec3(0, 1, 0)); self.camera.lookAt(self.pos + fwd * 15)
             else:
-                target = Vec3(self.pos.x, self.pos.y - 10, self.pos.z + 5)
+                target = Vec3(self.pos.x, self.pos.y - 12, self.pos.z + 6)
                 self.camera.setPos(self.camera.getPos() * .9 + target * .1)
                 self.camera.lookAt(self.pos.x, self.pos.y + 3, self.pos.z + .5)
             spd = (self.vel.x ** 2 + self.vel.y ** 2) ** .5
