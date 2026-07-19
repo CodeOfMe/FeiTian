@@ -51,4 +51,4 @@ def main() -> None:
     print(f"\n  FeiTian 飞天 已启动", flush=True)
     print(f"  {url}\n", flush=True)
 
-    uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")
+    uvicorn.run(app, host="127.0.0.1", port=port, log_level="info")
