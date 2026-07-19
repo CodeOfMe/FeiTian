@@ -68,7 +68,18 @@ function initLauncher() {
 
     // ── Device list ──────────────────────────────────────
     loadDeviceList();
-    $('#btn-rescan').addEventListener('click', loadDeviceList);
+    $('#btn-rescan').addEventListener('click', async () => {
+        // Try fresh API fetch for re-scan
+        try {
+            const resp = await fetch('/api/controllers');
+            const data = await resp.json();
+            if (data.controllers && data.controllers.length > 0) {
+                renderDeviceList(data.controllers);
+                return;
+            }
+        } catch (e) {}
+        loadDeviceList(); // fallback to embedded data
+    });
 
     // ── Mode buttons ─────────────────────────────────────
     $('#mode-select').addEventListener('click', e => {
@@ -274,33 +285,34 @@ function disconnectHID() {
     inputState && inputState.clearExternalAxes();
 }
 
-async function loadDeviceList() {
+function loadDeviceList() {
     const list = $('#device-list');
-    list.innerHTML = '<div class="device-scanning">正在扫描 USB / HID 设备...</div>';
+    if (!list) return;
 
-    let devices = [];
-
-    // Use pre-injected data from server if available (instant)
-    if (window.__DEVICES__ && window.__DEVICES__.length > 0) {
-        devices = window.__DEVICES__;
-    } else {
-        // Fallback: fetch from API
-        try {
-            const resp = await fetch('/api/controllers');
-            const data = await resp.json();
-            devices = data.controllers || [];
-        } catch (e) { /* offline */ }
-    }
+    let devices = (window.__DEVICES__ && window.__DEVICES__.length) ? window.__DEVICES__ : [];
 
     if (devices.length === 0) {
         list.innerHTML = '<div class="device-scanning">未检测到 HID 设备 — 可使用键盘操控</div>';
-        $('#device-status').className = 'device-status warn';
-        $('#device-status').textContent = '等待 USB 遥控器连接...（键盘模式可用）';
+        const st = $('#device-status');
+        if (st) { st.className = 'device-status warn'; st.textContent = '等待 USB 遥控器连接...'; }
         return;
     }
 
+    renderDeviceList(devices);
+}
+
+function renderDeviceList(devices) {
+    const list = $('#device-list');
+    if (!list) return;
+
+    let savedIdx = -1;
+    const saved = loadDevice();
+    if (saved) {
+        savedIdx = devices.findIndex(d => d.vid === saved.vid && d.pid === saved.pid);
+    }
+
     list.innerHTML = devices.map((d, i) => `
-        <div class="device-item${i === 0 ? ' selected' : ''}" data-idx="${i}">
+        <div class="device-item${i === savedIdx ? ' selected' : (savedIdx < 0 && i === 0 ? ' selected' : '')}" data-idx="${i}">
             <div class="radio"></div>
             <div class="info">
                 <div class="dev-name">${escapeHTML(d.name)}</div>
@@ -309,7 +321,6 @@ async function loadDeviceList() {
         </div>
     `).join('');
 
-    // Selection — connect HID if not a standard Gamepad
     list.querySelectorAll('.device-item').forEach(item => {
         item.addEventListener('click', () => {
             list.querySelectorAll('.device-item').forEach(x => x.classList.remove('selected'));
@@ -318,32 +329,16 @@ async function loadDeviceList() {
             const dev = devices[idx];
             selectedDevice = dev;
             saveDevice({ vid: dev.vid, pid: dev.pid, name: dev.name, idx });
-
-            // If Gamepad API already has a controller, skip HID
             if (!inputState.gamepadConnected && dev.vid && dev.pid) {
                 connectHID(dev.vid, dev.pid);
-                $('#device-status').className = 'device-status ok';
-                $('#device-status').textContent = '已连接 HID: ' + dev.name;
+                const st = $('#device-status');
+                if (st) { st.className = 'device-status ok'; st.textContent = '已连接 HID: ' + dev.name; }
             }
         });
     });
 
-    // Auto-restore previously selected device
-    const saved = loadDevice();
-    if (saved && saved.idx != null && saved.idx < devices.length) {
-        const items = list.querySelectorAll('.device-item');
-        items.forEach(x => x.classList.remove('selected'));
-        if (items[saved.idx]) {
-            items[saved.idx].classList.add('selected');
-            selectedDevice = devices[saved.idx];
-            if (!inputState.gamepadConnected && saved.vid && saved.pid) {
-                connectHID(saved.vid, saved.pid);
-            }
-        }
-    }
-
-    $('#device-status').className = 'device-status ok';
-    $('#device-status').textContent = `检测到 ${devices.length} 个设备`;
+    const st = $('#device-status');
+    if (st) { st.className = 'device-status ok'; st.textContent = '检测到 ' + devices.length + ' 个设备'; }
 }
 
 function escapeHTML(s) {
