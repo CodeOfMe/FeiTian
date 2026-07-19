@@ -14,6 +14,7 @@ const simulator = $('#simulator');
 
 // ── Settings ──────────────────────────────────────────────────
 const SETTINGS_KEY = 'feitian_settings';
+const DEVICE_KEY = 'feitian_selected_device';
 let settings = { mode: 2, rcThrottle: false, deadzone: 0.08, smooth: 0.18 };
 
 // Persisted mode presets: [throttle, yaw, pitch, roll] → physical axis index
@@ -24,7 +25,9 @@ const MODE_PRESETS = {
     4: { throttle: 1, yaw: 2, pitch: 3, roll: 0 },
 };
 
-let inputState = null; // created after launch or early for calibration
+let inputState = null;
+let simulatorInitialized = false;
+let animFrameId = null;
 
 // ── Load saved settings ──────────────────────────────────────
 try {
@@ -34,6 +37,17 @@ try {
 
 function saveSettings() {
     try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) {}
+}
+
+function saveDevice(dev) {
+    try { localStorage.setItem(DEVICE_KEY, JSON.stringify(dev)); } catch (e) {}
+}
+
+function loadDevice() {
+    try {
+        const raw = localStorage.getItem(DEVICE_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -105,6 +119,12 @@ function initLauncher() {
 
     // ── Start launcher update loop ───────────────────────
     requestAnimationFrame(launcherTick);
+}
+
+function launchSimulator() {
+    applyModeToInput();
+    saveSettings();
+    navigateTo('flight');
 }
 
 function applySettingsToDOM() {
@@ -260,6 +280,7 @@ async function loadDeviceList() {
             const idx = +item.dataset.idx;
             const dev = devices[idx];
             selectedDevice = dev;
+            saveDevice({ vid: dev.vid, pid: dev.pid, name: dev.name, idx });
 
             // If Gamepad API already has a controller, skip HID
             if (!inputState.gamepadConnected && dev.vid && dev.pid) {
@@ -269,6 +290,20 @@ async function loadDeviceList() {
             }
         });
     });
+
+    // Auto-restore previously selected device
+    const saved = loadDevice();
+    if (saved && saved.idx != null && saved.idx < devices.length) {
+        const items = list.querySelectorAll('.device-item');
+        items.forEach(x => x.classList.remove('selected'));
+        if (items[saved.idx]) {
+            items[saved.idx].classList.add('selected');
+            selectedDevice = devices[saved.idx];
+            if (!inputState.gamepadConnected && saved.vid && saved.pid) {
+                connectHID(saved.vid, saved.pid);
+            }
+        }
+    }
 
     $('#device-status').className = 'device-status ok';
     $('#device-status').textContent = `检测到 ${devices.length} 个设备`;
@@ -352,19 +387,46 @@ function updateLauncherLive() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// LAUNCH → SIMULATOR TRANSITION
+// HISTORY / NAVIGATION
 // ═══════════════════════════════════════════════════════════════
 
-function launchSimulator() {
-    // Apply final settings
-    applyModeToInput();
-    saveSettings();
-
-    launcher.classList.add('hidden');
-    simulator.classList.remove('hidden');
-
-    initSimulator();
+function navigateTo(view, push = true) {
+    if (push) {
+        history.pushState({ view }, '', view === 'flight' ? '#flight' : '#launcher');
+    } else {
+        history.replaceState({ view }, '', view === 'flight' ? '#flight' : '#launcher');
+    }
+    _showView(view);
 }
+
+function _showView(view) {
+    if (view === 'flight') {
+        launcher.classList.add('hidden');
+        simulator.classList.remove('hidden');
+        if (!simulatorInitialized) {
+            initSimulator();
+            simulatorInitialized = true;
+        }
+    } else {
+        // Back to launcher
+        if (animFrameId) {
+            cancelAnimationFrame(animFrameId);
+            animFrameId = null;
+        }
+        simulator.classList.add('hidden');
+        launcher.classList.remove('hidden');
+        loadDeviceList();
+        requestAnimationFrame(launcherTick);
+    }
+}
+
+window.addEventListener('popstate', (e) => {
+    const view = (e.state && e.state.view) || 'launcher';
+    _showView(view);
+});
+
+// On initial load, use replaceState so we don't create an extra history entry
+history.replaceState({ view: 'launcher' }, '', '#launcher');
 
 // ═══════════════════════════════════════════════════════════════
 // SIMULATOR
@@ -407,11 +469,8 @@ function initSimulator() {
                 state.angularVelocity.set(0, 0, 0);
                 break;
             case 'Escape':
-                // Return to launcher
-                simulator.classList.add('hidden');
-                launcher.classList.remove('hidden');
-                loadDeviceList();
-                requestAnimationFrame(launcherTick);
+                // Back to launcher via browser history
+                history.back();
                 break;
         }
     });
@@ -420,7 +479,7 @@ function initSimulator() {
     function animate(now) {
         if (simulator.classList.contains('hidden')) return;
 
-        requestAnimationFrame(animate);
+        animFrameId = requestAnimationFrame(animate);
 
         state.dt = Math.min((now - state.lastTime) / 1000, 0.05);
         state.lastTime = now;
