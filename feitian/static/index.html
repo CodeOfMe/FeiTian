@@ -13,6 +13,7 @@
         }
     }
     </script>
+<script>window.__DEVICES__ = {{DEVICES_JSON}};</script>
 </head>
 <body>
 
@@ -35,6 +36,22 @@
             <div id="device-list">
                 <div class="device-scanning">正在扫描 USB / HID 设备...</div>
             </div>
+            <script>
+(function(){
+    var d = window.__DEVICES__;
+    if (!d || !d.length) return;
+    var html = '';
+    for (var i=0; i<d.length; i++) {
+        var dev = d[i];
+        var span = document.createElement('span');
+        span.textContent = dev.name;
+        html += '<div class="device-item" data-idx="'+i+'" data-vid="'+dev.vid+'" data-pid="'+dev.pid+'"><div class="radio"></div><div class="info"><div class="dev-name">'+span.innerHTML+'</div><div class="dev-id">VID:'+dev.vid+' PID:'+dev.pid+'</div></div></div>';
+    }
+    document.getElementById('device-list').innerHTML = html;
+    var st = document.getElementById('device-status');
+    if (st) { st.className = 'device-status ok'; st.textContent = '检测到 '+d.length+' 个设备'; }
+})();
+</script>
             <div id="device-status" class="device-status"></div>
         </div>
 
@@ -114,6 +131,7 @@
     <div id="app"></div>
 </div>
 
+<script>window.__RENDER_DEVICES__ = true;</script>
 <script type="module" src="/static/js/main.js"></script>
 </body>
 </html>

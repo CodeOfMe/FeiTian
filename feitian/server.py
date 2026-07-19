@@ -138,9 +138,7 @@ def create_app() -> FastAPI:
     async def index() -> HTMLResponse:
         controllers = scan_controllers()
         html = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
-        # Inject device list so frontend doesn't need to fetch
-        injected = f"<script>window.__DEVICES__ = {json.dumps(controllers)};</script>"
-        html = html.replace("</head>", injected + "\n</head>")
+        html = html.replace("{{DEVICES_JSON}}", json.dumps(controllers))
         return HTMLResponse(content=html)
 
     @app.get("/api/controllers")
