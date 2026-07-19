@@ -298,10 +298,10 @@ def flight():
                 idx = int((ty / SIZE + .5) * RES); idy = int((tx / SIZE + .5) * RES)
                 hz = heights[min(idx, RES - 1), min(idy, RES - 1)] if 0 <= idx < RES and 0 <= idy < RES else 0
                 h = 1.5 + random.random() * 4
-                trunk = self.loader.loadModel("models/cylinder")
+                trunk = self.loader.loadModel("models/box")
                 trunk.setScale(.1, .1, h * .4); trunk.setPos(tx, ty, hz + h * .2); trunk.reparentTo(self.render)
                 trunk.setColor(.3, .2, .1)
-                crown = self.loader.loadModel("models/sphere")
+                crown = self.loader.loadModel("models/box")
                 cr = .5 + random.random() * .6
                 crown.setScale(cr, cr, cr); crown.setPos(tx, ty, hz + h * .75); crown.reparentTo(self.render)
                 sh = .25 + .3 * random.random()
@@ -312,9 +312,9 @@ def flight():
             hz0 = heights[RES // 2, RES // 2]; self.drone.setPos(0, 0, hz0 + 3)
 
             # Body
-            body = self.loader.loadModel("models/cylinder"); body.setScale(.22, .22, .08)
+            body = self.loader.loadModel("models/box"); body.setScale(.22, .22, .08)
             body.setPos(0, 0, .1); body.setColor(.08, .08, .18); body.reparentTo(self.drone)
-            top = self.loader.loadModel("models/sphere"); top.setScale(.18, .18, .06)
+            top = self.loader.loadModel("models/box"); top.setScale(.18, .18, .06)
             top.setPos(0, 0, .15); top.setColor(.12, .12, .22); top.reparentTo(self.drone)
 
             # Arms: 4 rectangular bars
@@ -322,29 +322,29 @@ def flight():
             arm_colors = [(.9, .15, .15), (.15, .9, .15), (.9, .9, .15), (.15, .9, .9)]
             for i in range(4):
                 a = i * math.pi / 2; cx, cy = math.cos(a), math.sin(a)
-                arm = self.loader.loadModel("models/cylinder"); arm.setScale(.04, .04, .45)
+                arm = self.loader.loadModel("models/box"); arm.setScale(.04, .04, .45)
                 arm.setPos(cx * .45, cy * .45, .12); arm.setHpr(i * 90, 90, 0)
                 arm.setColor(.1, .1, .22); arm.reparentTo(self.drone)
                 # Motor housing
-                motor = self.loader.loadModel("models/cylinder"); motor.setScale(.1, .1, .04)
+                motor = self.loader.loadModel("models/box"); motor.setScale(.1, .1, .04)
                 motor.setPos(cx * .9, cy * .9, .14); motor.setColor(.25, .25, .3); motor.reparentTo(self.drone)
                 # Rotor disc
-                disc = self.loader.loadModel("models/cylinder"); disc.setScale(.65, .65, .008)
+                disc = NodePath(PandaNode('disc'+str(i)))
+                cm = CardMaker('disc'+str(i)); cm.setFrame(-.65, .65, -.65, .65)
+                disc.attachNewNode(cm.generate())
                 disc.setPos(cx * .9, cy * .9, .18)
                 disc.setColor(*arm_colors[i]); disc.setTransparency(TransparencyAttrib.MAlpha)
                 disc.reparentTo(self.drone); self.rotors.append(disc)
-                # Rotor guard ring
-                guard = self.loader.loadModel("models/cylinder"); guard.setScale(.02, .02, .65)
                 guard.setPos(cx * .9, cy * .9, .18); guard.setHpr(0, 90, 0)
                 guard.setColor(.6, .6, .6); guard.reparentTo(self.drone)
 
             # Legs
             for a in [.5, 2.6, 3.7, 5.8]:
                 cx, cy = math.cos(a), math.sin(a)
-                leg = self.loader.loadModel("models/cylinder"); leg.setScale(.03, .03, .1)
+                leg = self.loader.loadModel("models/box"); leg.setScale(.03, .03, .1)
                 leg.setPos(cx * .2, cy * .2, -.04); leg.setColor(.08, .08, .08); leg.reparentTo(self.drone)
             # FPV camera
-            cam = self.loader.loadModel("models/sphere"); cam.setScale(.03, .03, .03)
+            cam = self.loader.loadModel("models/box"); cam.setScale(.03, .03, .03)
             cam.setPos(.3, 0, .12); cam.setColor(0, 0, 0); cam.reparentTo(self.drone)
 
             # Camera

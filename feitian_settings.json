@@ -1,1 +1,1 @@
-{"mode": 2, "deadzone": 0.08, "smooth": 0.18, "rcThr": false, "ch": {"throttle": 3, "yaw": 4, "pitch": 2, "roll": 0}, "inv": {"throttle": false, "yaw": false, "pitch": false, "roll": false}, "sub": {"throttle": 0, "yaw": 0, "pitch": 0, "roll": 0}}
+{"mode": 2, "deadzone": 0.08, "smooth": 0.18, "rcThr": false, "ch": {"throttle": 3, "yaw": 4, "pitch": 2, "roll": 0}, "inv": {"throttle": false, "yaw": false, "pitch": false, "roll": false}, "sub": {"throttle": 0, "yaw": 0, "pitch": 0, "roll": 0}, "last_vid": "1781", "last_pid": "0898"}
