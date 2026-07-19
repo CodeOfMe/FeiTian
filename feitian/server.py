@@ -22,8 +22,25 @@ STATIC_DIR = Path(__file__).parent / "static"
 DEFAULT_PORT = 9999
 
 
+def _find_pid_on_port(port: int) -> str | None:
+    """Return PID of the process listening on the given port, or None."""
+    import subprocess
+    try:
+        out = subprocess.check_output(
+            f'netstat -ano | findstr "LISTENING" | findstr ":{port} "',
+            shell=True, text=True, timeout=5,
+        )
+        for line in out.strip().split('\n'):
+            parts = line.split()
+            if len(parts) >= 5 and parts[1].endswith(f':{port}'):
+                return parts[-1]
+    except Exception:
+        pass
+    return None
+
+
 def _get_port() -> int:
-    """Try default port 9999; if occupied, fall back to random or prompt."""
+    """Try default port 9999; offer to kill occupier, or fall back."""
     port = DEFAULT_PORT
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
@@ -33,13 +50,39 @@ def _get_port() -> int:
     except OSError:
         s.close()
 
-    # 9999 occupied — try prompt, fall back to random
+    pid = _find_pid_on_port(port)
+
+    # Interactive mode — ask user
     try:
         if sys.stdin.isatty():
+            if pid:
+                ans = input(
+                    f"\n  端口 {port} 被 PID {pid} 占用，是否强制结束？[Y/n]: "
+                ).strip().lower()
+                if ans in ('', 'y', 'yes'):
+                    import subprocess
+                    subprocess.run(f'taskkill /F /PID {pid}', shell=True, timeout=5)
+                    import time
+                    time.sleep(0.5)
+                    # Retry binding
+                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    try:
+                        s.bind(("127.0.0.1", port))
+                        s.close()
+                        print(f"  已释放端口 {port}", flush=True)
+                        return port
+                    except OSError:
+                        print(f"  强制结束失败，换用其他端口", flush=True)
+                        s.close()
+            else:
+                print(f"  端口 {port} 被占用（未能定位进程）", flush=True)
+
+            # Prompt for alternative
             while True:
                 try:
-                    alt = input(f"  端口 {port} 被占用，请输入新端口: ").strip()
-                    if not alt: continue
+                    alt = input(f"  请输入新端口: ").strip()
+                    if not alt:
+                        continue
                     port = int(alt)
                     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     s.bind(("127.0.0.1", port))
@@ -53,7 +96,7 @@ def _get_port() -> int:
     except (EOFError, OSError):
         pass
 
-    # Non-interactive or prompt failed — pick a random free port
+    # Non-interactive — auto pick a free port
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(("127.0.0.1", 0))
     port = s.getsockname()[1]
