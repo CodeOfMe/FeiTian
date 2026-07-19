@@ -6,6 +6,7 @@
 //   - RC transmitters via USB HID (EdgeTX/OpenTX: Radiomaster, Jumper, FrSky, etc.)
 //   - Per-axis calibration with localStorage persistence
 //   - Non-self-centering throttle (RC mode)
+//   - Backend HID scanning (calls /api/controllers for system-level detection)
 
 const STORAGE_KEY = 'feitian_calibration';
 
@@ -112,8 +113,15 @@ export class InputState {
         // Smoothing factor
         this._smoothFactor = 0.18;
 
+        // Status messages (consumed by HUD)
+        this.hintMsg = '';
+        this.hidDevices = []; // from backend scan
+
         // ── Load saved calibration ─────────────────────────────
         this._loadCalibration();
+
+        // ── Fetch HID devices from backend ─────────────────────
+        this._fetchHidDevices();
 
         // ── Listeners ──────────────────────────────────────────
         this._onKeyDown = this._onKeyDown.bind(this);
@@ -384,6 +392,22 @@ export class InputState {
         stateInput.pitch    = this.pitch;
         stateInput.roll     = this.roll;
         stateInput.yaw      = this.yaw;
+    }
+
+    /** Query backend for HID devices at the OS level */
+    async _fetchHidDevices() {
+        try {
+            const resp = await fetch('/api/controllers');
+            const data = await resp.json();
+            this.hidDevices = data.controllers || [];
+
+            if (this.hidDevices.length > 0 && !this._gpConnected) {
+                this.hintMsg = `Found ${this.hidDevices.length} HID device(s) — connect & press C to calibrate`;
+                setTimeout(() => { if (this.hintMsg === `Found ${this.hidDevices.length} HID device(s) — connect & press C to calibrate`) this.hintMsg = ''; }, 8000);
+            }
+        } catch (e) {
+            // Backend not available (browser dev mode), ignore
+        }
     }
 
     destroy() {

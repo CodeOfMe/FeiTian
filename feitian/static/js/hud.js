@@ -31,6 +31,8 @@ export class HUD {
         this.controllerConnected = false;
         this.calibrating = false;
         this.calibrationMsg = '';
+        this.hintMsg = '';
+        this.hidDevices = [];
 
         // Listen for input events
         window.addEventListener('feitian:calibration-start', () => {
@@ -271,13 +273,19 @@ export class HUD {
 
     _drawControllerStatus(ctx, w, h) {
         const x = 15;
-        const y = 15;
+        let y = 15;
 
         ctx.save();
         ctx.font = 'bold 11px monospace';
 
+        // Hint message
+        if (this.hintMsg) {
+            ctx.fillStyle = '#ffcc00';
+            ctx.fillText(this.hintMsg, x, y + 12);
+            y += 20;
+        }
+
         if (this.calibrating) {
-            // Calibration indicator
             const blink = Math.floor(performance.now() / 400) % 2 === 0;
             ctx.fillStyle = blink ? '#ffcc00' : '#ff8800';
             ctx.fillText('⚙ CALIBRATING — ' + this.calibrationMsg, x, y + 12);
@@ -290,6 +298,11 @@ export class HUD {
                 ? this.controllerName.slice(0, 37) + '...'
                 : this.controllerName;
             ctx.fillText('🎮 ' + shortName, x, y + 12);
+        } else if (this.hidDevices.length > 0) {
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            const names = this.hidDevices.slice(0, 3).map(d => d.name).join(', ');
+            const more = this.hidDevices.length > 3 ? ` +${this.hidDevices.length - 3} more` : '';
+            ctx.fillText(`🔍 HID: ${names}${more}`, x, y + 12);
         }
 
         ctx.restore();

@@ -13,8 +13,10 @@ from pathlib import Path
 import uvicorn
 import webview
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+
+from feitian.controller_scanner import scan_controllers
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -33,6 +35,12 @@ def create_app() -> FastAPI:
     @app.get("/")
     async def index() -> FileResponse:
         return FileResponse(STATIC_DIR / "index.html")
+
+    @app.get("/api/controllers")
+    async def list_controllers() -> JSONResponse:
+        """Scan for connected HID controllers / RC transmitters."""
+        controllers = scan_controllers()
+        return JSONResponse(content={"controllers": controllers})
 
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 

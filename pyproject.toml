@@ -30,6 +30,9 @@ dependencies = [
     "uvicorn>=0.30",
 ]
 
+[project.optional-dependencies]
+hid = ["hidapi>=0.14"]
+
 [project.scripts]
 feitian = "feitian.__main__:main"
 
