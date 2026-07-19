@@ -230,12 +230,108 @@ def flight():
     from panda3d.core import (load_prc_file_data, Vec3, Vec4, AmbientLight,
         DirectionalLight, TextNode, TransparencyAttrib, CardMaker, NodePath, PandaNode,
         LVector3, GeomVertexFormat, GeomVertexData, Geom, GeomTriangles,
-        GeomVertexWriter, GeomNode, Mat4)
+        GeomVertexWriter, GeomNode, Mat4, Texture, SamplerState)
     from direct.showbase.ShowBase import ShowBase
     load_prc_file_data("", "window-title FeiTian FPV")
     load_prc_file_data("", "win-size 1280 720"); load_prc_file_data("", "sync-video 0")
 
-    SIZE, RES = 500, 128
+    SIZE, RES = 400, 128
+    heights = np.zeros((RES, RES), dtype=np.float32)
+    for _ in range(3):
+        amp = 1.2 / (2 ** _); freq = 2 ** _ * 1.5
+        for y in range(RES):
+            for x in range(RES):
+                heights[y, x] += amp * math.sin(x * freq * .15) * math.cos(y * freq * .15) + amp * .4 * math.sin(x * freq * .08 + y * freq * .05)
+
+    tex_arr = np.zeros((512, 512, 3), dtype=np.uint8)
+    tex_arr[:, :, 1] = 140
+    for _ in range(8000):
+        x, y = random.randint(0, 511), random.randint(0, 511)
+        g = 100 + random.randint(0, 60); r = 60 + random.randint(0, 40); b = 25 + random.randint(0, 20)
+        tex_arr[y, x] = [r, g, b]
+    tex_arr[::32, :, :] = (tex_arr[::32, :, :] * .7).astype(np.uint8)
+    tex_arr[:, ::32, :] = (tex_arr[:, ::32, :] * .7).astype(np.uint8)
+
+    class App(ShowBase):
+        def __init__(self):
+            ShowBase.__init__(self)
+            self.setBackgroundColor(.35, .5, .7, 1); self.disableMouse()
+            al = AmbientLight('al'); al.setColor(Vec4(.45, .5, .5, 1))
+            dl = DirectionalLight('dl'); dl.setColor(Vec4(1.1, 1.0, .85, 1))
+            dln = self.render.attachNewNode(dl); dln.setHpr(55, -30, 0)
+            self.render.setLight(self.render.attachNewNode(al)); self.render.setLight(dln)
+
+            for c, h in [(Vec4(.4, .55, .8, 1), .04), (Vec4(.55, .7, .92, 1), .25), (Vec4(.65, .78, .97, 1), .55), (Vec4(.25, .35, .5, 1), 1)]:
+                cm = CardMaker('sky'); cm.setFrame(-600, 600, -600, 600)
+                n = self.render.attachNewNode(cm.generate()); n.setPos(0, 0, h * 450); n.setColor(c)
+                n.setBin('background', 0); n.setDepthWrite(False)
+
+            ttex = Texture('grass'); ttex.setup2dTexture(512, 512, Texture.T_unsigned_byte, Texture.F_rgb)
+            ttex.setRamImage(tex_arr.tobytes())
+            ttex.setWrapU(SamplerState.WM_repeat); ttex.setWrapV(SamplerState.WM_repeat)
+            ttex.setMinfilter(SamplerState.FT_linear_mipmap_linear); ttex.setMagfilter(SamplerState.FT_linear)
+
+            fmt = GeomVertexFormat.getV3n3t2()
+            vdata = GeomVertexData('terrain', fmt, Geom.UHStatic); vdata.setNumRows(RES * RES)
+            vtx = GeomVertexWriter(vdata, 'vertex'); nrm = GeomVertexWriter(vdata, 'normal'); txc = GeomVertexWriter(vdata, 'texcoord')
+            for y in range(RES):
+                for x in range(RES):
+                    px = (x / (RES - 1) - .5) * SIZE; py = (y / (RES - 1) - .5) * SIZE; pz = heights[y, x]
+                    vtx.addData3f(px, py, pz); txc.addData2f(x / (RES - 1) * 30, y / (RES - 1) * 30)
+            for _ in range(RES * RES): nrm.addData3f(0, 0, 1)
+            tris = GeomTriangles(Geom.UHStatic)
+            for y in range(RES - 1):
+                for x in range(RES - 1):
+                    a = y * RES + x; b = a + 1; c = a + RES; d = c + 1
+                    tris.addVertices(a, b, c); tris.addVertices(b, d, c)
+            geom = Geom(vdata); geom.addPrimitive(tris)
+            tn = GeomNode('terrain'); tn.addGeom(geom)
+            gnd = self.render.attachNewNode(tn); gnd.setPos(-SIZE / 2, -SIZE / 2, 0)
+            gnd.setTexture(ttex)
+
+            for i in range(6):
+                cm = CardMaker('pad'); cm.setFrame(-3, 3, -3, 3)
+                p = self.render.attachNewNode(cm.generate()); p.setPos(0, 0, .005 + i * .0015); p.setColor(.4 + .06 * i, .4 + .06 * i, .4 + .06 * i)
+            rcm = CardMaker('ring'); rcm.setFrame(-3, 3, -3, 3)
+            ring = self.render.attachNewNode(rcm.generate()); ring.setPos(0, 0, .015); ring.setColor(.9, .9, .9)
+
+            for _ in range(80):
+                tx = (random.random() - .5) * 380; ty = (random.random() - .5) * 380
+                if math.sqrt(tx * tx + ty * ty) < 18: continue
+                idx = int((ty / SIZE + .5) * RES); idy = int((tx / SIZE + .5) * RES)
+                hz = heights[min(idx, RES - 1), min(idy, RES - 1)] if 0 <= idx < RES and 0 <= idy < RES else 0
+                h = 1.2 + random.random() * 3; sh = .25 + .25 * random.random()
+                trunk = self.loader.loadModel("models/box"); trunk.setScale(.08, .08, h * .35)
+                trunk.setPos(tx, ty, hz + h * .18); trunk.setColor(.25, .18, .08); trunk.reparentTo(self.render)
+                crown = self.loader.loadModel("models/box"); cr = .35 + random.random() * .4
+                crown.setScale(cr, cr, cr); crown.setPos(tx, ty, hz + h * .65); crown.reparentTo(self.render)
+                crown.setColor(sh, .4 + sh * .3, .06)
+
+            self.drone = NodePath(PandaNode("drone")); self.drone.reparentTo(self.render)
+            hz0 = heights[RES // 2, RES // 2]; self.drone.setPos(0, 0, hz0 + 3)
+            for i, (sx, sy, sz, z) in enumerate([(.2, .2, .06, .08), (.18, .14, .04, .12), (.12, .08, .02, .14)]):
+                b = self.loader.loadModel("models/box"); b.setScale(sx, sy, sz); b.setPos(0, 0, z); b.setColor(.08 + .02 * i, .08 + .02 * i, .15 + .03 * i); b.reparentTo(self.drone)
+
+            self.rotors = []
+            ac = [(1, .15, .15), (.15, 1, .15), (1, 1, .15), (.15, 1, 1)]
+            for i in range(4):
+                a = i * math.pi / 2; cx, cy = math.cos(a), math.sin(a)
+                arm = self.loader.loadModel("models/box"); arm.setScale(.03, .03, .4)
+                arm.setPos(cx * .42, cy * .42, .1); arm.setH(i * 90); arm.setColor(.1, .1, .2); arm.reparentTo(self.drone)
+                motor = self.loader.loadModel("models/box"); motor.setScale(.08, .08, .03)
+                motor.setPos(cx * .82, cy * .82, .12); motor.setColor(.2, .2, .28); motor.reparentTo(self.drone)
+                disc = NodePath(PandaNode('d' + str(i)))
+                cm = CardMaker('d' + str(i)); cm.setFrame(-.55, .55, -.55, .55)
+                disc.attachNewNode(cm.generate()); disc.setPos(cx * .82, cy * .82, .15)
+                disc.setColor(*ac[i]); disc.setTransparency(TransparencyAttrib.MAlpha); disc.reparentTo(self.drone)
+                self.rotors.append(disc)
+
+            for a in [.6, 2.5, 3.8, 5.7]:
+                cx, cy = math.cos(a), math.sin(a)
+                leg = self.loader.loadModel("models/box"); leg.setScale(.025, .025, .08)
+                leg.setPos(cx * .18, cy * .18, -.03); leg.setColor(.06, .06, .06); leg.reparentTo(self.drone)
+
+            self.camera.setPos(0, -14, 6); self.camera.lookAt(0, 0, hz0 + 3); self.camMode = 'third', 128
     heights = np.zeros((RES, RES), dtype=np.float32)
     for _ in range(4):
         amp = 8 / (2 ** _); freq = 2 ** _ * .8
