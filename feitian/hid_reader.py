@@ -35,6 +35,7 @@ class HIDReader:
         self.axes = [0.0, 0.0, 0.0, 0.0]
         self.buttons = 0
         self.connected = False
+        self.raw_bytes = [0] * 8  # latest 8 raw bytes (hex)
         self._lock = threading.Lock()
 
     def open(self) -> bool:
@@ -102,8 +103,8 @@ class HIDReader:
         with self._lock:
             for i, raw in enumerate(axes_raw):
                 self.axes[i] = (raw - 127) / 127.0  # normalize to [-1, 1]
-            # Buttons: lower nibble of byte 7?
             self.buttons = data[7] if len(data) > 7 else 0
+            self.raw_bytes = [data[i] if i < len(data) else 0 for i in range(8)]
 
     def get_state(self) -> dict:
         """Return current controller state as dict (thread-safe)."""
@@ -112,6 +113,7 @@ class HIDReader:
                 "axes": list(self.axes),
                 "buttons": self.buttons,
                 "connected": self.connected,
+                "raw": [b for b in self.raw_bytes],
             }
 
 

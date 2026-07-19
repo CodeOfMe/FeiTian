@@ -15,7 +15,13 @@ const simulator = $('#simulator');
 // ── Settings ──────────────────────────────────────────────────
 const SETTINGS_KEY = 'feitian_settings';
 const DEVICE_KEY = 'feitian_selected_device';
-let settings = { mode: 2, rcThrottle: false, deadzone: 0.08, smooth: 0.18 };
+let settings = { mode: 2, rcThrottle: false, deadzone: 0.08, smooth: 0.18,
+    chanMap: { throttle:0, yaw:2, pitch:4, roll:6 },
+    chanInvert: { throttle:false, yaw:false, pitch:false, roll:false },
+    chanSubtrim: { throttle:0, yaw:0, pitch:0, roll:0 },
+    chanEndpointL: { throttle:100, yaw:100, pitch:100, roll:100 },
+    chanEndpointR: { throttle:100, yaw:100, pitch:100, roll:100 },
+};
 
 // Persisted mode presets: [throttle, yaw, pitch, roll] → physical axis index
 const MODE_PRESETS = {
@@ -73,7 +79,6 @@ function initLauncher() {
         btn.classList.add('active');
         applyModeToInput();
         saveSettings();
-        syncMapSelects();
     });
 
     // ── Sliders ──────────────────────────────────────────
@@ -87,19 +92,15 @@ function initLauncher() {
         saveSettings();
     });
 
-    // ── Calibration ──────────────────────────────────────
-    $('#btn-calib').addEventListener('click', () => {
-        if (inputState._calibrating) {
-            inputState._toggleCalibration();
-            $('#btn-calib').textContent = '开始校准';
-            $('#btn-calib').classList.remove('active');
-        } else {
-            inputState._toggleCalibration();
-            $('#btn-calib').textContent = '完成校准';
-            $('#btn-calib').classList.add('active');
-        }
-    });
+    // ── Reset mapping ────────────────────────────────────
     $('#btn-calib-reset').addEventListener('click', () => {
+        settings.chanMap = { throttle:0, yaw:2, pitch:4, roll:6 };
+        settings.chanInvert = { throttle:false, yaw:false, pitch:false, roll:false };
+        settings.chanSubtrim = { throttle:0, yaw:0, pitch:0, roll:0 };
+        settings.chanEndpointL = { throttle:100, yaw:100, pitch:100, roll:100 };
+        settings.chanEndpointR = { throttle:100, yaw:100, pitch:100, roll:100 };
+        saveSettings();
+        populateMapSelects();
         inputState.resetCalibration();
     });
 
@@ -114,7 +115,6 @@ function initLauncher() {
 
     // ── Populate axis map selects ────────────────────────
     populateMapSelects();
-    syncMapSelects();
     applyModeToInput();
 
     // ── Start launcher update loop ───────────────────────
@@ -158,30 +158,55 @@ function bindSlider(id, key, fmt) {
 }
 
 function populateMapSelects() {
-    ['throttle','yaw','pitch','roll'].forEach(name => {
-        const sel = $('#map-' + name);
-        sel.innerHTML = '';
-        for (let i = 0; i <= 7; i++) {
-            const opt = document.createElement('option');
-            opt.value = i;
-            opt.textContent = '轴 ' + i;
-            sel.appendChild(opt);
-        }
-        sel.addEventListener('change', () => {
-            if (inputState) {
-                inputState._axisMap[name] = +sel.value;
-            }
-        });
-    });
-}
+    // Build per-channel config rows
+    const container = $('#axis-configs');
+    if (!container) return;
+    const chNames = ['throttle','yaw','pitch','roll'];
+    const chLabels = ['油门','偏航','俯仰','横滚'];
 
-function syncMapSelects() {
-    if (!inputState) return;
-    const preset = MODE_PRESETS[settings.mode];
-    ['throttle','yaw','pitch','roll'].forEach(name => {
-        const val = preset[name] ?? ({throttle:1,yaw:0,pitch:3,roll:2}[name]);
-        $('#map-' + name).value = val;
-        inputState._axisMap[name] = val;
+    container.innerHTML = chNames.map((name, i) => `
+        <div class="axis-config-row" id="cfg-${name}">
+            <span class="ch-label">${chLabels[i]}</span>
+            <div class="ch-bar-wrap"><div class="ch-bar-fill" id="chbar-${name}"></div></div>
+            <span class="ch-val" id="chval-${name}">0.00</span>
+            <select id="chsrc-${name}">
+                ${[0,1,2,3,4,5,6,7].map(b => `<option value="${b}">B${b}</option>`).join('')}
+            </select>
+            <label class="ch-invert"><input type="checkbox" id="chinv-${name}">反</label>
+            <input type="number" id="chsub-${name}" value="0" min="-127" max="127" step="1" title="Subtrim">
+            <input type="number" id="chepl-${name}" value="100" min="10" max="200" step="1" title="Endpoint L%">
+            <input type="number" id="chepr-${name}" value="100" min="10" max="200" step="1" title="Endpoint R%">
+        </div>
+    `).join('');
+
+    // Wire events
+    chNames.forEach(name => {
+        $(`#chsrc-${name}`).value = settings.chanMap[name];
+        $(`#chinv-${name}`).checked = settings.chanInvert[name];
+        $(`#chsub-${name}`).value = settings.chanSubtrim[name];
+        $(`#chepl-${name}`).value = settings.chanEndpointL[name];
+        $(`#chepr-${name}`).value = settings.chanEndpointR[name];
+
+        $(`#chsrc-${name}`).addEventListener('change', e => {
+            settings.chanMap[name] = +e.target.value;
+            saveSettings();
+        });
+        $(`#chinv-${name}`).addEventListener('change', e => {
+            settings.chanInvert[name] = e.target.checked;
+            saveSettings();
+        });
+        $(`#chsub-${name}`).addEventListener('change', e => {
+            settings.chanSubtrim[name] = +e.target.value || 0;
+            saveSettings();
+        });
+        $(`#chepl-${name}`).addEventListener('change', e => {
+            settings.chanEndpointL[name] = +e.target.value || 100;
+            saveSettings();
+        });
+        $(`#chepr-${name}`).addEventListener('change', e => {
+            settings.chanEndpointR[name] = +e.target.value || 100;
+            saveSettings();
+        });
     });
 }
 
@@ -224,8 +249,13 @@ function connectHID(vid, pid) {
     hidWs.onmessage = (e) => {
         try {
             const msg = JSON.parse(e.data);
-            if (msg.status === 'data' && msg.axes && inputState) {
-                inputState.setExternalAxes(msg.axes);
+            if (msg.status === 'data') {
+                if (msg.raw && inputState) {
+                    inputState.setRawHidBytes(msg.raw);
+                }
+                if (msg.axes && inputState) {
+                    inputState.setExternalAxes(msg.axes);
+                }
             }
         } catch (err) {}
     };
@@ -326,10 +356,8 @@ function launcherTick(now) {
 function updateLauncherLive() {
     if (!inputState) return;
 
-    // Input processing (even in launcher)
     inputState.update(0.016);
 
-    // Controller status
     const status = $('#device-status');
     if (inputState.gamepadConnected) {
         status.className = 'device-status ok';
@@ -339,52 +367,73 @@ function updateLauncherLive() {
         status.textContent = '已连接 HID 设备（原始读取）';
     }
 
-    // Live axis bars — use external HID data if available, else gamepad
-    const axes = inputState._extAxes;
-    if (axes) {
-        // External HID axes: [throttle, yaw, pitch, roll]
-        const names = ['throttle','yaw','pitch','roll'];
-        names.forEach((name, i) => {
-            const v = axes[i] || 0;
-            const bar = $('#bar-' + name);
-            const val = $('#val-' + name);
-            const pct = Math.round((v + 1) * 50);
-            if (v >= 0) {
-                bar.style.left = '50%';
-                bar.style.width = (v * 50) + '%';
+    // ── Raw HID bytes display ─────────────────────────────
+    const rawEl = $('#hid-raw');
+    if (inputState._extConnected && inputState._rawHidBytes) {
+        rawEl.textContent = 'RAW: ' + inputState._rawHidBytes.map(b =>
+            b.toString(16).padStart(2,'0').toUpperCase()
+        ).join(' ');
+    } else {
+        rawEl.textContent = 'RAW: -- -- -- -- -- -- -- --';
+    }
+
+    // ── Per-channel live bars (HID mode) ──────────────────
+    const names = ['throttle','yaw','pitch','roll'];
+    if (inputState._extConnected && inputState._rawHidBytes) {
+        const raw = inputState._rawHidBytes;
+        names.forEach(name => {
+            const byteIdx = settings.chanMap[name] ?? ({throttle:0,yaw:2,pitch:4,roll:6}[name]);
+            let val = (raw[byteIdx] || 0) - 127; // 0x7F center
+            val = val / 127; // normalize [-1, 1]
+
+            // Subtrim
+            val += (settings.chanSubtrim[name] || 0) / 127;
+            // Invert
+            if (settings.chanInvert[name]) val = -val;
+            // Endpoint
+            if (val < 0) val *= (settings.chanEndpointL[name] || 100) / 100;
+            else val *= (settings.chanEndpointR[name] || 100) / 100;
+            val = Math.max(-1, Math.min(1, val));
+
+            const bar = $('#chbar-' + name);
+            const vdisp = $('#chval-' + name);
+            if (val >= 0) {
+                bar.style.left = '50%'; bar.style.width = (val * 50) + '%';
             } else {
-                bar.style.left = (50 + v * 50) + '%';
-                bar.style.width = (-v * 50) + '%';
+                bar.style.left = (50 + val * 50) + '%'; bar.style.width = (-val * 50) + '%';
             }
-            val.textContent = v.toFixed(2);
+            if (vdisp) vdisp.textContent = val.toFixed(2);
         });
+
+        // Feed mapped axes to physics via setExternalAxes
+        const mapped = names.map(name => {
+            const byteIdx = settings.chanMap[name] ?? 0;
+            let v = ((raw[byteIdx] || 0) - 127) / 127;
+            v += (settings.chanSubtrim[name] || 0) / 127;
+            if (settings.chanInvert[name]) v = -v;
+            if (v < 0) v *= (settings.chanEndpointL[name] || 100) / 100;
+            else v *= (settings.chanEndpointR[name] || 100) / 100;
+            return Math.max(-1, Math.min(1, v));
+        });
+        inputState.setExternalAxes(mapped);
     } else if (inputState.gamepadConnected) {
         const gp = navigator.getGamepads()[inputState._gpIndex];
         if (gp && gp.axes) {
-            ['throttle','yaw','pitch','roll'].forEach(name => {
+            names.forEach(name => {
                 const idx = inputState._axisMap[name] ?? ({throttle:1,yaw:0,pitch:3,roll:2}[name]);
                 const raw = (idx < gp.axes.length) ? gp.axes[idx] : 0;
                 const clamped = Math.max(-1, Math.min(1, raw));
-                const bar = $('#bar-' + name);
-                const val = $('#val-' + name);
+                const bar = $('#chbar-' + name);
+                const vdisp = $('#chval-' + name);
                 if (clamped >= 0) {
-                    bar.style.left = '50%';
-                    bar.style.width = (clamped * 50) + '%';
+                    bar.style.left = '50%'; bar.style.width = (clamped * 50) + '%';
                 } else {
-                    bar.style.left = (50 + clamped * 50) + '%';
-                    bar.style.width = (-clamped * 50) + '%';
+                    bar.style.left = (50 + clamped * 50) + '%'; bar.style.width = (-clamped * 50) + '%';
                 }
-                val.textContent = clamped.toFixed(2);
+                if (vdisp) vdisp.textContent = clamped.toFixed(2);
             });
         }
     }
-
-    // Calibration button state
-    if (inputState._calibrating) {
-        $('#btn-calib').textContent = '完成校准';
-        $('#btn-calib').classList.add('active');
-    }
-}
 
 // ═══════════════════════════════════════════════════════════════
 // HISTORY / NAVIGATION

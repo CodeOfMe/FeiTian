@@ -119,6 +119,7 @@ export class InputState {
 
         // External HID data (via WebSocket)
         this._extAxes = null;  // [t, y, p, r] from external HID reader
+        this._rawHidBytes = null;  // raw 8 bytes from HID report
         this._extConnected = false;
 
         // ── Load saved calibration ─────────────────────────────
@@ -412,8 +413,15 @@ export class InputState {
         this._extConnected = true;
     }
 
+    /** Feed raw HID bytes (8 bytes) from WebSocket for per-channel mapping */
+    setRawHidBytes(bytes) {
+        this._rawHidBytes = bytes;
+        this._extConnected = true;
+    }
+
     clearExternalAxes() {
         this._extAxes = null;
+        this._rawHidBytes = null;
         this._extConnected = false;
     }
 

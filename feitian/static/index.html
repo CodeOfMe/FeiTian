@@ -45,15 +45,6 @@
             </div>
             <div class="settings-grid">
                 <div class="setting-item">
-                    <label>操控模式</label>
-                    <div class="mode-select" id="mode-select">
-                        <button data-mode="1">Mode 1</button>
-                        <button data-mode="2" class="active">Mode 2</button>
-                        <button data-mode="3">Mode 3</button>
-                        <button data-mode="4">Mode 4</button>
-                    </div>
-                </div>
-                <div class="setting-item">
                     <label>死区 <span id="lbl-deadzone">8%</span></label>
                     <input type="range" id="slider-deadzone" min="0" max="30" value="8" step="1">
                 </div>
@@ -71,41 +62,33 @@
         <!-- Calibration -->
         <div class="launcher-section" id="calib-section">
             <div class="section-header">
-                <h2>校准</h2>
+                <h2>通道映射与微调</h2>
+                <span class="hid-raw" id="hid-raw">RAW: -- -- -- -- -- -- -- --</span>
             </div>
             <div class="calib-area">
-                <div class="axis-bars" id="axis-bars">
-                    <div class="axis-bar-row">
-                        <span class="axis-label">油门</span>
-                        <div class="bar-track"><div class="bar-fill" id="bar-throttle"></div></div>
-                        <span class="axis-val" id="val-throttle">0.00</span>
-                        <select id="map-throttle" class="map-sel"></select>
-                    </div>
-                    <div class="axis-bar-row">
-                        <span class="axis-label">偏航</span>
-                        <div class="bar-track"><div class="bar-fill" id="bar-yaw"></div></div>
-                        <span class="axis-val" id="val-yaw">0.00</span>
-                        <select id="map-yaw" class="map-sel"></select>
-                    </div>
-                    <div class="axis-bar-row">
-                        <span class="axis-label">俯仰</span>
-                        <div class="bar-track"><div class="bar-fill" id="bar-pitch"></div></div>
-                        <span class="axis-val" id="val-pitch">0.00</span>
-                        <select id="map-pitch" class="map-sel"></select>
-                    </div>
-                    <div class="axis-bar-row">
-                        <span class="axis-label">横滚</span>
-                        <div class="bar-track"><div class="bar-fill" id="bar-roll"></div></div>
-                        <span class="axis-val" id="val-roll">0.00</span>
-                        <select id="map-roll" class="map-sel"></select>
-                    </div>
+                <div class="axis-configs" id="axis-configs">
+                    <!-- filled by JS -->
                 </div>
                 <div class="calib-btns">
-                    <button class="btn primary" id="btn-calib">开始校准</button>
-                    <button class="btn" id="btn-calib-reset">恢复默认</button>
+                    <button class="btn" id="btn-calib-reset">恢复默认映射</button>
                 </div>
-                <p class="hint">校准：点击开始后将摇杆推到所有极限位置画圈，再点击完成。</p>
+                <p class="hint">选择每个通道对应的 HID 字节序号。摇动摇杆看 RAW 值变化确定映射。</p>
             </div>
+        </div>
+
+        <!-- Mode -->
+        <div class="launcher-section" id="mode-section">
+            <div class="section-header"><h2>操控模式</h2></div>
+            <div class="mode-select" id="mode-select">
+                <button data-mode="1">Mode 1<div class="mode-desc">右手油门</div></button>
+                <button data-mode="2" class="active">Mode 2<div class="mode-desc">左手油门 · 美国手</div></button>
+                <button data-mode="3">Mode 3<div class="mode-desc">右手油门</div></button>
+                <button data-mode="4">Mode 4<div class="mode-desc">左手油门</div></button>
+            </div>
+            <p class="hint" style="margin-top:8px">
+                <b>Mode 2（美国手）</b>: 左摇杆 ↑↓=油门 ←→=偏航 · 右摇杆 ↑↓=俯仰 ←→=横滚<br>
+                <b>Mode 1（日本手）</b>: 右摇杆 ↑↓=油门 ←→=偏航 · 左摇杆 ↑↓=俯仰 ←→=横滚
+            </p>
         </div>
 
         <!-- Launch -->

@@ -182,6 +182,52 @@ input[type=range] {
 
 .calib-btns { display:flex; gap:8px; margin-bottom: 6px; }
 
+/* ── Raw HID display ─────────────────────────────────────── */
+.hid-raw {
+    font-family: 'Consolas', monospace; font-size: 0.78rem;
+    color: var(--accent); letter-spacing: 0.05em;
+}
+.axis-config-row {
+    display:flex; align-items:center; gap:6px; margin-bottom:6px;
+    flex-wrap:wrap; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.04);
+}
+.axis-config-row .ch-label {
+    width:36px; font-weight:600; font-size:0.82rem; color:#ccc;
+}
+.axis-config-row .ch-bar-wrap {
+    flex:1; min-width:60px; height:16px; background:#111128;
+    border-radius:3px; position:relative; overflow:hidden;
+}
+.axis-config-row .ch-bar-wrap::after {
+    content:''; position:absolute; top:0; bottom:0; left:50%;
+    width:1px; background:rgba(255,255,255,0.12);
+}
+.axis-config-row .ch-bar-fill {
+    position:absolute; top:0; height:100%;
+    background:var(--accent); border-radius:3px;
+}
+.axis-config-row .ch-val {
+    width:38px; font-size:0.72rem; font-family:'Consolas',monospace; text-align:right;
+}
+.axis-config-row select {
+    font-size:0.72rem; background:#111128; color:#ccc;
+    border:1px solid var(--border); border-radius:3px; padding:2px 3px;
+}
+.axis-config-row input[type=number] {
+    width:44px; font-size:0.72rem; background:#111128; color:#ccc;
+    border:1px solid var(--border); border-radius:3px; padding:2px 4px;
+    text-align:center; font-family:'Consolas',monospace;
+}
+.axis-config-row input[type=checkbox] {
+    width:14px; height:14px; accent-color:var(--accent);
+}
+.axis-config-row .ch-invert {
+    font-size:0.7rem; color:var(--text2); display:flex; align-items:center; gap:2px;
+}
+
+/* ── Mode description ────────────────────────────────────── */
+.mode-desc { font-size:0.65rem; font-weight:400; color:var(--text2); margin-top:2px; }
+
 /* ── Buttons ───────────────────────────────────────────────── */
 
 .btn {
