@@ -1,137 +1,73 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FeiTian 飞天 — FPV Drone Simulator</title>
-    <link rel="stylesheet" href="/static/css/main.css?v=2">
-    <script type="importmap">
-    {
-        "imports": {
-            "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
-            "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
-        }
-    }
-    </script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>FeiTian 飞天</title>
+<link rel="stylesheet" href="/static/style.css?v=1">
 <script>window.__DEVICES__ = {{DEVICES_JSON}};</script>
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════════════════════════ -->
-<!-- LAUNCHER VIEW                                               -->
-<!-- ═══════════════════════════════════════════════════════════ -->
-<div id="launcher">
-    <div class="launcher-card">
-        <div class="launcher-header">
-            <h1>FeiTian <span class="cn">飞天</span></h1>
-            <p class="subtitle">Multi-rotor FPV Drone Flight Simulator</p>
-        </div>
+<!-- SETUP VIEW -->
+<div id="setup">
+  <div class="card">
+    <div class="header"><h1>FeiTian <span>飞天</span></h1><p>FPV Drone Simulator</p></div>
 
-        <!-- Controller detection -->
-        <div class="launcher-section" id="device-section">
-            <div class="section-header">
-                <h2>控制器</h2>
-                <button class="btn-sm" id="btn-rescan">重新扫描</button>
-            </div>
-            <div id="device-list">
-                <div class="device-scanning">正在扫描 USB / HID 设备...</div>
-            </div>
-            <script>
+    <div class="section">
+      <div class="bar"><h2>控制器</h2><button id="btn-rescan">重新扫描</button></div>
+      <div id="devices"></div>
+      <div id="dev-status"></div>
+    </div>
+
+    <div class="section">
+      <div class="bar"><h2>通道映射</h2></div>
+      <div id="raw-disp" class="raw">RAW: -- -- -- -- -- -- -- --</div>
+      <div id="chans"></div>
+      <button id="btn-learn" class="pri">自动检测通道</button>
+      <span id="learn-status"></span>
+      <p class="hint">点击"自动检测"后摇杆画圈5秒</p>
+    </div>
+
+    <div class="section">
+      <div class="bar"><h2>参数</h2></div>
+      <div class="row"><label>死区 <span id="dz-val">8%</span></label><input type="range" id="dz" min="0" max="30" value="8"></div>
+      <div class="row"><label>平滑 <span id="sm-val">0.18</span></label><input type="range" id="sm" min="5" max="50" value="18"></div>
+      <div class="row"><label>操控模式</label>
+        <select id="mode"><option value="1">Mode 1 日本手</option><option value="2" selected>Mode 2 美国手</option><option value="3">Mode 3</option><option value="4">Mode 4</option></select>
+      </div>
+      <div class="row"><label><input type="checkbox" id="rc-thr"> RC油门（不自回中）</label></div>
+    </div>
+
+    <div class="actions">
+      <button id="btn-fly" class="pri big">开始飞行</button>
+      <p class="hint">或按 Enter</p>
+    </div>
+  </div>
+</div>
+
+<!-- FLIGHT VIEW -->
+<div id="flight" class="hidden">
+  <canvas id="cvs"></canvas>
+  <div id="hud">
+    <div class="hud-row"><span id="hud-alt">0.0m</span> <span id="hud-spd">0.0m/s</span> <span id="hud-thr">0%</span></div>
+    <div class="hud-info">V:视角 R:重置 Esc:返回</div>
+  </div>
+</div>
+
+<!-- RENDER DEVICES INLINE -->
+<script>
 (function(){
-    var d = window.__DEVICES__;
-    if (!d || !d.length) return;
-    var html = '';
-    for (var i=0; i<d.length; i++) {
-        var dev = d[i];
-        var span = document.createElement('span');
-        span.textContent = dev.name;
-        html += '<div class="device-item" data-idx="'+i+'" data-vid="'+dev.vid+'" data-pid="'+dev.pid+'"><div class="radio"></div><div class="info"><div class="dev-name">'+span.innerHTML+'</div><div class="dev-id">VID:'+dev.vid+' PID:'+dev.pid+'</div></div></div>';
-    }
-    document.getElementById('device-list').innerHTML = html;
-    var st = document.getElementById('device-status');
-    if (st) { st.className = 'device-status ok'; st.textContent = '检测到 '+d.length+' 个设备'; }
+  var d=window.__DEVICES__; if(!d||!d.length) return;
+  var h=''; for(var i=0;i<d.length;i++){var n=document.createElement('span');n.textContent=d[i].name;
+  h+='<div class="dev" data-idx="'+i+'" data-vid="'+d[i].vid+'" data-pid="'+d[i].pid+'"><div class="dot"></div><div><div class="dn">'+n.innerHTML+'</div><div class="di">VID:'+d[i].vid+' PID:'+d[i].pid+'</div></div></div>';}
+  document.getElementById('devices').innerHTML=h;
+  document.getElementById('dev-status').textContent='检测到 '+d.length+' 个设备';
 })();
 </script>
-            <div id="device-status" class="device-status"></div>
-        </div>
 
-        <!-- Settings -->
-        <div class="launcher-section" id="settings-section">
-            <div class="section-header">
-                <h2>设置</h2>
-            </div>
-            <div class="settings-grid">
-                <div class="setting-item">
-                    <label>死区 <span id="lbl-deadzone">8%</span></label>
-                    <input type="range" id="slider-deadzone" min="0" max="30" value="8" step="1">
-                </div>
-                <div class="setting-item">
-                    <label>平滑度 <span id="lbl-smooth">0.18</span></label>
-                    <input type="range" id="slider-smooth" min="5" max="50" value="18" step="1">
-                </div>
-                <div class="setting-item checkbox-item">
-                    <input type="checkbox" id="toggle-rc-throttle">
-                    <label for="toggle-rc-throttle">RC 油门模式（非自回中油门杆）</label>
-                </div>
-            </div>
-        </div>
-
-        <!-- Calibration -->
-        <div class="launcher-section" id="calib-section">
-            <div class="section-header">
-                <h2>通道映射与微调</h2>
-                <span class="hid-raw" id="hid-raw">RAW: -- -- -- -- -- -- -- --</span>
-            </div>
-            <div class="calib-area">
-                <div class="axis-configs" id="axis-configs">
-                    <!-- filled by JS -->
-                </div>
-                <div class="calib-btns">
-                    <button class="btn primary" id="btn-learn">自动检测通道</button>
-                    <button class="btn" id="btn-calib-reset">恢复默认映射</button>
-                </div>
-                <div class="calib-btns" style="margin-top:6px">
-                    <span class="hint" id="learn-status"></span>
-                </div>
-                <p class="hint">点击"自动检测通道"，将两个摇杆画圈推到极限，5秒自动完成。</p>
-            </div>
-        </div>
-
-        <!-- Mode -->
-        <div class="launcher-section" id="mode-section">
-            <div class="section-header"><h2>操控模式</h2></div>
-            <div class="mode-select" id="mode-select">
-                <button data-mode="1">Mode 1<div class="mode-desc">右手油门</div></button>
-                <button data-mode="2" class="active">Mode 2<div class="mode-desc">左手油门 · 美国手</div></button>
-                <button data-mode="3">Mode 3<div class="mode-desc">右手油门</div></button>
-                <button data-mode="4">Mode 4<div class="mode-desc">左手油门</div></button>
-            </div>
-            <p class="hint" style="margin-top:8px">
-                <b>Mode 2（美国手）</b>: 左摇杆 ↑↓=油门 ←→=偏航 · 右摇杆 ↑↓=俯仰 ←→=横滚<br>
-                <b>Mode 1（日本手）</b>: 右摇杆 ↑↓=油门 ←→=偏航 · 左摇杆 ↑↓=俯仰 ←→=横滚
-            </p>
-        </div>
-
-        <!-- Launch -->
-        <div class="launcher-actions">
-            <button class="btn primary big" id="btn-launch">开始飞行</button>
-            <p class="hint" id="launch-hint">或按 Enter 快速开始</p>
-        </div>
-
-        <div class="launcher-footer">
-            键盘操控：W/S 油门 · ↑↓ 俯仰 · ←→ 横滚 · A/D 偏航 · V 视角 · R 重置
-        </div>
-    </div>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════ -->
-<!-- SIMULATOR VIEW                                              -->
-<!-- ═══════════════════════════════════════════════════════════ -->
-<div id="simulator" class="hidden">
-    <div id="app"></div>
-</div>
-
-<script>window.__RENDER_DEVICES__ = true;</script>
-<script type="module" src="/static/js/main.js"></script>
+<script src="/static/js/babylon.js"></script>
+<script src="/static/js/babylon.gui.js"></script>
+<script src="/static/js/app.js"></script>
 </body>
 </html>
