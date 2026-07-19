@@ -103,6 +103,58 @@ function initLauncher() {
         saveSettings();
     });
 
+    // ── Auto-learn channels ───────────────────────────────
+    let learning = false, learnStart = 0, learnData = null;
+
+    $('#btn-learn').addEventListener('click', () => {
+        if (learning) return;
+        learning = true;
+        learnStart = Date.now();
+        learnData = Array.from({length: 8}, () => ({min: 255, max: 0}));
+        $('#learn-status').textContent = '学习中... 请摇动两个摇杆到所有极限位置！';
+        $('#btn-learn').textContent = '学习中...';
+        $('#btn-learn').disabled = true;
+
+        // Poll raw bytes
+        const check = () => {
+            if (!learning) return;
+            const elapsed = (Date.now() - learnStart) / 1000;
+            if (elapsed > 5) {
+                finishLearn();
+                return;
+            }
+            $('#learn-status').textContent = `学习中... ${(5 - elapsed).toFixed(1)}s 剩余`;
+            if (inputState._rawHidBytes) {
+                inputState._rawHidBytes.forEach((b, i) => {
+                    if (b < learnData[i].min) learnData[i].min = b;
+                    if (b > learnData[i].max) learnData[i].max = b;
+                });
+            }
+            setTimeout(check, 100);
+        };
+        check();
+    });
+
+    function finishLearn() {
+        learning = false;
+        $('#btn-learn').textContent = '自动检测通道';
+        $('#btn-learn').disabled = false;
+
+        // Find 4 bytes with largest range -> map to channels
+        const ranges = learnData.map((d, i) => ({i, r: d.max - d.min}));
+        ranges.sort((a, b) => b.r - a.r);
+        const top4 = ranges.slice(0, 4).map(r => r.i);
+
+        // Assign: largest range = throttle, then yaw, pitch, roll
+        const names = ['throttle', 'yaw', 'pitch', 'roll'];
+        names.forEach((name, idx) => {
+            settings.chanMap[name] = top4[idx] ?? idx * 2;
+        });
+        saveSettings();
+        populateMapSelects();
+        $('#learn-status').textContent = `检测完成！通道映射: ${top4.join(', ')} (对应 油门 偏航 俯仰 横滚)`;
+    }
+
     // ── Reset mapping ────────────────────────────────────
     $('#btn-calib-reset').addEventListener('click', () => {
         settings.chanMap = { throttle:0, yaw:2, pitch:4, roll:6 };

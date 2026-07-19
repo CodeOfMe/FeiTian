@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FeiTian 飞天 — FPV Drone Simulator</title>
-    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="stylesheet" href="/static/css/main.css?v=2">
     <script type="importmap">
     {
         "imports": {
@@ -70,9 +70,13 @@
                     <!-- filled by JS -->
                 </div>
                 <div class="calib-btns">
+                    <button class="btn primary" id="btn-learn">自动检测通道</button>
                     <button class="btn" id="btn-calib-reset">恢复默认映射</button>
                 </div>
-                <p class="hint">选择每个通道对应的 HID 字节序号。摇动摇杆看 RAW 值变化确定映射。</p>
+                <div class="calib-btns" style="margin-top:6px">
+                    <span class="hint" id="learn-status"></span>
+                </div>
+                <p class="hint">点击"自动检测通道"，将两个摇杆画圈推到极限，5秒自动完成。</p>
             </div>
         </div>
 
