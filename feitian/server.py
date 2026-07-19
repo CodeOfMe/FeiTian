@@ -3,13 +3,14 @@ FeiTian server — FastAPI + WebSocket for HID controller data streaming.
 """
 
 import asyncio
+import json
 import socket
 import sys
 from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from feitian.controller_scanner import scan_controllers
@@ -63,8 +64,13 @@ def create_app() -> FastAPI:
     app = FastAPI(title="FeiTian", docs_url=None, redoc_url=None)
 
     @app.get("/")
-    async def index() -> FileResponse:
-        return FileResponse(STATIC_DIR / "index.html")
+    async def index() -> HTMLResponse:
+        controllers = scan_controllers()
+        html = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
+        # Inject device list so frontend doesn't need to fetch
+        injected = f"<script>window.__DEVICES__ = {json.dumps(controllers)};</script>"
+        html = html.replace("</head>", injected + "\n</head>")
+        return HTMLResponse(content=html)
 
     @app.get("/api/controllers")
     async def list_controllers() -> JSONResponse:

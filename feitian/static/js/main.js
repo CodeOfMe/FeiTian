@@ -279,11 +279,18 @@ async function loadDeviceList() {
     list.innerHTML = '<div class="device-scanning">正在扫描 USB / HID 设备...</div>';
 
     let devices = [];
-    try {
-        const resp = await fetch('/api/controllers');
-        const data = await resp.json();
-        devices = data.controllers || [];
-    } catch (e) { /* offline dev */ }
+
+    // Use pre-injected data from server if available (instant)
+    if (window.__DEVICES__ && window.__DEVICES__.length > 0) {
+        devices = window.__DEVICES__;
+    } else {
+        // Fallback: fetch from API
+        try {
+            const resp = await fetch('/api/controllers');
+            const data = await resp.json();
+            devices = data.controllers || [];
+        } catch (e) { /* offline */ }
+    }
 
     if (devices.length === 0) {
         list.innerHTML = '<div class="device-scanning">未检测到 HID 设备 — 可使用键盘操控</div>';
