@@ -1,4 +1,4 @@
-"""FeiTian 飞天 — Panda3D FPV drone simulator (DirectGUI setup)."""
+"""FeiTian — Panda3D FPV drone simulator (DirectGUI setup)."""
 import json,math,os,random,sys,threading,time
 from pathlib import Path
 import numpy as np
@@ -52,7 +52,7 @@ from panda3d.core import (load_prc_file_data,Vec3,Vec4,Point3,AmbientLight,
 from direct.showbase.ShowBase import ShowBase
 from direct.gui.DirectGui import (DirectFrame,DirectButton,DirectLabel,
   DirectScrolledList,DirectSlider,DirectCheckButton,DirectEntry)
-load_prc_file_data("","window-title FeiTian 飞天 — FPV");load_prc_file_data("","win-size 1280 720");load_prc_file_data("","sync-video 0")
+load_prc_file_data("","window-title FeiTian — FPV");load_prc_file_data("","win-size 1280 720");load_prc_file_data("","sync-video 0")
 
 SIZE,RES=500,128
 heights=np.zeros((RES,RES),dtype=np.float32)
@@ -85,7 +85,7 @@ class App(ShowBase):
       numItemsVisible=5,items=items,itemFrame_frameSize=(-.02,.48,-.02,.05),
       itemFrame_frameColor=dk,forceHeight=.07,incButton_pos=(.5,0,-.33),
       decButton_pos=(.5,0,.33))
-    self.dlist.addItem("键盘操控（无Controllers）")
+    self.dlist.addItem("Keyboard")
     self.dev_status=DirectLabel(text=f"Found {len(self.devlist)} devices",scale=.04,pos=(-.65,0,-.15),text_fg=(.3,.8,.3,1),text_align=TextNode.A_left,frameColor=(0,0,0,0))
     DirectButton(text="Rescan",scale=.045,pos=(-.15,0,-.15),command=self._rescan,frameColor=dk,text_fg=fg,borderWidth=(1,1))
 
@@ -121,7 +121,7 @@ class App(ShowBase):
     self.sm_slider=DirectSlider(range=(5,50),value=int(S["smooth"]*100),pos=(-.45,0,-.47),scale=.25,
                    frameColor=dk,thumb_frameColor=ac,command=lambda:self._slider('smooth'))
     self.sm_label=DirectLabel(text=str(int(S["smooth"]*100)),scale=.04,pos=(-.2,0,-.47),text_fg=fg,frameColor=(0,0,0,0))
-    self.rc_cb=DirectCheckButton(text="RCThrottle（不自回Sub）",scale=.045,pos=(-.65,0,-.56),indicatorValue=S["rcThr"],
+    self.rc_cb=DirectCheckButton(text="RCThrottle",scale=.045,pos=(-.65,0,-.56),indicatorValue=S["rcThr"],
                    text_fg=tx,frameColor=(0,0,0,0),
                    command=lambda val:S.update({"rcThr":val}))
 
@@ -145,7 +145,7 @@ class App(ShowBase):
   def _rescan(self):
     self.devlist=scan_controllers()
     items=[f"{d['name']} [{d['vid']}:{d['pid']}]" for d in self.devlist]
-    self.dlist['items']=items+["键盘操控（无Controllers）"]
+    self.dlist['items']=items+["Keyboard"]
     self.dev_status['text']=f"Found {len(self.devlist)} devices"
   def _learn_start(self):
     if self.learn:self.learn=False;self._finish_learn();return
@@ -337,6 +337,6 @@ def main():
   except Exception as e:
     import traceback;traceback.print_exc()
     try:
-      import tkinter.messagebox as mb;mb.showerror("FeiTian 错误",f"启动失败:\n{e}")
+      import tkinter.messagebox as mb;mb.showerror("FeiTian Error",f"Start failed:\n{e}")
     except:pass
     sys.exit(1)
