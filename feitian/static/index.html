@@ -4,11 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FeiTian 飞天 — FPV Drone Simulator</title>
-    <link rel="stylesheet" href="/static/css/settings.css">
     <link rel="stylesheet" href="/static/css/main.css">
-</head>
-<body>
-    <div id="app">FeiTian 飞天 启动中...</div>
     <script type="importmap">
     {
         "imports": {
@@ -17,6 +13,120 @@
         }
     }
     </script>
-    <script type="module" src="/static/js/main.js"></script>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- LAUNCHER VIEW                                               -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="launcher">
+    <div class="launcher-card">
+        <div class="launcher-header">
+            <h1>FeiTian <span class="cn">飞天</span></h1>
+            <p class="subtitle">Multi-rotor FPV Drone Flight Simulator</p>
+        </div>
+
+        <!-- Controller detection -->
+        <div class="launcher-section" id="device-section">
+            <div class="section-header">
+                <h2>控制器</h2>
+                <button class="btn-sm" id="btn-rescan">重新扫描</button>
+            </div>
+            <div id="device-list">
+                <div class="device-scanning">正在扫描 USB / HID 设备...</div>
+            </div>
+            <div id="device-status" class="device-status"></div>
+        </div>
+
+        <!-- Settings -->
+        <div class="launcher-section" id="settings-section">
+            <div class="section-header">
+                <h2>设置</h2>
+            </div>
+            <div class="settings-grid">
+                <div class="setting-item">
+                    <label>操控模式</label>
+                    <div class="mode-select" id="mode-select">
+                        <button data-mode="1">Mode 1</button>
+                        <button data-mode="2" class="active">Mode 2</button>
+                        <button data-mode="3">Mode 3</button>
+                        <button data-mode="4">Mode 4</button>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <label>死区 <span id="lbl-deadzone">8%</span></label>
+                    <input type="range" id="slider-deadzone" min="0" max="30" value="8" step="1">
+                </div>
+                <div class="setting-item">
+                    <label>平滑度 <span id="lbl-smooth">0.18</span></label>
+                    <input type="range" id="slider-smooth" min="5" max="50" value="18" step="1">
+                </div>
+                <div class="setting-item checkbox-item">
+                    <input type="checkbox" id="toggle-rc-throttle">
+                    <label for="toggle-rc-throttle">RC 油门模式（非自回中油门杆）</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Calibration -->
+        <div class="launcher-section" id="calib-section">
+            <div class="section-header">
+                <h2>校准</h2>
+            </div>
+            <div class="calib-area">
+                <div class="axis-bars" id="axis-bars">
+                    <div class="axis-bar-row">
+                        <span class="axis-label">油门</span>
+                        <div class="bar-track"><div class="bar-fill" id="bar-throttle"></div></div>
+                        <span class="axis-val" id="val-throttle">0.00</span>
+                        <select id="map-throttle" class="map-sel"></select>
+                    </div>
+                    <div class="axis-bar-row">
+                        <span class="axis-label">偏航</span>
+                        <div class="bar-track"><div class="bar-fill" id="bar-yaw"></div></div>
+                        <span class="axis-val" id="val-yaw">0.00</span>
+                        <select id="map-yaw" class="map-sel"></select>
+                    </div>
+                    <div class="axis-bar-row">
+                        <span class="axis-label">俯仰</span>
+                        <div class="bar-track"><div class="bar-fill" id="bar-pitch"></div></div>
+                        <span class="axis-val" id="val-pitch">0.00</span>
+                        <select id="map-pitch" class="map-sel"></select>
+                    </div>
+                    <div class="axis-bar-row">
+                        <span class="axis-label">横滚</span>
+                        <div class="bar-track"><div class="bar-fill" id="bar-roll"></div></div>
+                        <span class="axis-val" id="val-roll">0.00</span>
+                        <select id="map-roll" class="map-sel"></select>
+                    </div>
+                </div>
+                <div class="calib-btns">
+                    <button class="btn primary" id="btn-calib">开始校准</button>
+                    <button class="btn" id="btn-calib-reset">恢复默认</button>
+                </div>
+                <p class="hint">校准：点击开始后将摇杆推到所有极限位置画圈，再点击完成。</p>
+            </div>
+        </div>
+
+        <!-- Launch -->
+        <div class="launcher-actions">
+            <button class="btn primary big" id="btn-launch">开始飞行</button>
+            <p class="hint" id="launch-hint">或按 Enter 快速开始</p>
+        </div>
+
+        <div class="launcher-footer">
+            键盘操控：W/S 油门 · ↑↓ 俯仰 · ←→ 横滚 · A/D 偏航 · V 视角 · R 重置
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SIMULATOR VIEW                                              -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="simulator" class="hidden">
+    <div id="app"></div>
+</div>
+
+<script type="module" src="/static/js/main.js"></script>
 </body>
 </html>
