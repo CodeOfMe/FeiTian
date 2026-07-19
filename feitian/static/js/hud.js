@@ -246,7 +246,7 @@ export class HUD {
         ctx.save();
         ctx.fillStyle = 'rgba(0,0,0,0.45)';
         ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-        roundRect(ctx, x, y, 170, 120, 8);
+        roundRect(ctx, x, y, 170, 140, 8);
         ctx.fill();
         ctx.stroke();
 
@@ -260,6 +260,7 @@ export class HUD {
             'A/D    Yaw',
             'V      FPV/3rd',
             'C      Calibrate',
+            'Esc    Settings',
             'R      Reset',
         ];
         hints.forEach((hint, i) => {

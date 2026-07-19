@@ -7,6 +7,7 @@ import { createTerrain } from './terrain.js';
 import { stepPhysics } from './physics.js';
 import { InputState } from './input.js';
 import { HUD } from './hud.js';
+import { SettingsPanel } from './settings.js';
 
 // ── State ──────────────────────────────────────────────────────
 const state = {
@@ -104,6 +105,9 @@ async function init() {
     // HUD
     const hud = new HUD();
 
+    // Settings panel (Escape to toggle)
+    const settingsPanel = new SettingsPanel(inputState);
+
     // ── Keyboard extras ──────────────────────────────────────
     window.addEventListener('keydown', (e) => {
         switch (e.code) {
@@ -158,6 +162,9 @@ async function init() {
         hud.hintMsg = inputState.hintMsg;
         hud.hidDevices = inputState.hidDevices;
         hud.draw(state);
+
+        // Settings panel
+        settingsPanel.update();
 
         // Render
         getRenderer().render(scene, getCamera());

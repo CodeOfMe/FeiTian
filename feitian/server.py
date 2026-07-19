@@ -1,11 +1,9 @@
 """
-FeiTian server — FastAPI backend, serves the WebGL flight simulator,
-opens Firefox browser.
+FeiTian server — FastAPI backend, serves the WebGL flight simulator.
+Headless by default — just prints the URL.
 """
 
-import os
 import socket
-import subprocess
 import sys
 import threading
 from pathlib import Path
@@ -26,32 +24,6 @@ def _find_free_port() -> int:
         return s.getsockname()[1]
 
 
-def _find_firefox() -> str | None:
-    """Locate Firefox executable on this system."""
-    candidates = []
-    if sys.platform == "win32":
-        candidates = [
-            os.path.expandvars(r"%ProgramFiles%\Mozilla Firefox\firefox.exe"),
-            os.path.expandvars(r"%ProgramFiles(x86)%\Mozilla Firefox\firefox.exe"),
-            os.path.expandvars(r"%LocalAppData%\Mozilla Firefox\firefox.exe"),
-        ]
-    elif sys.platform == "darwin":
-        candidates = ["/Applications/Firefox.app/Contents/MacOS/firefox"]
-    else:
-        for name in ("firefox", "firefox-esr", "firefox-nightly"):
-            try:
-                subprocess.run(["which", name], capture_output=True, check=True)
-                return name
-            except Exception:
-                pass
-        return None
-
-    for path in candidates:
-        if os.path.isfile(path):
-            return path
-    return None
-
-
 def create_app() -> FastAPI:
     app = FastAPI(title="FeiTian", docs_url=None, redoc_url=None)
 
@@ -69,37 +41,14 @@ def create_app() -> FastAPI:
 
 
 def main() -> None:
-    """Start FeiTian simulator — opens in Firefox."""
+    """Start FeiTian headless — prints the URL, stays running."""
+    sys.stdout.reconfigure(encoding="utf-8")
+
     port = _find_free_port()
     app = create_app()
-
-    server_thread = threading.Thread(
-        target=uvicorn.run,
-        args=(app,),
-        kwargs={"host": "127.0.0.1", "port": port, "log_level": "warning"},
-        daemon=True,
-    )
-    server_thread.start()
-
     url = f"http://127.0.0.1:{port}"
-    print(f"[FeiTian] Server: {url}")
 
-    firefox = _find_firefox()
-    if firefox:
-        print(f"[FeiTian] Launching Firefox: {firefox}")
-        subprocess.Popen([firefox, url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    else:
-        print("[FeiTian] Firefox not found, opening with default browser...")
-        if sys.platform == "win32":
-            os.startfile(url)
-        else:
-            import webbrowser
-            webbrowser.open(url)
+    print(f"\n  FeiTian 飞天 已启动", flush=True)
+    print(f"  {url}\n", flush=True)
 
-    print("[FeiTian] Running. Press Ctrl+C to stop.")
-    try:
-        import time
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print("[FeiTian] Shutting down.")
+    uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")
