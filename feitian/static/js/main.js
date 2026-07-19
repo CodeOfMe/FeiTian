@@ -152,6 +152,9 @@ async function init() {
         }
 
         // HUD
+        hud.controllerConnected = inputState.gamepadConnected;
+        hud.controllerName = inputState.gamepadName;
+        hud.calibrating = inputState.calibrating;
         hud.draw(state);
 
         // Render

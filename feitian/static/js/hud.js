@@ -17,7 +17,7 @@ export class HUD {
             position: 'fixed',
             top: '0', left: '0',
             width: '100%', height: '100%',
-            pointerEvents: 'none', // clicks pass through
+            pointerEvents: 'none',
             zIndex: '10',
         });
 
@@ -25,6 +25,31 @@ export class HUD {
 
         this._resize();
         window.addEventListener('resize', () => this._resize());
+
+        // Controller info (updated from main)
+        this.controllerName = '';
+        this.controllerConnected = false;
+        this.calibrating = false;
+        this.calibrationMsg = '';
+
+        // Listen for input events
+        window.addEventListener('feitian:calibration-start', () => {
+            this.calibrating = true;
+            this.calibrationMsg = 'Move all sticks to extremes...';
+        });
+        window.addEventListener('feitian:calibration-end', () => {
+            this.calibrating = false;
+            this.calibrationMsg = 'Calibration saved!';
+            setTimeout(() => { this.calibrationMsg = ''; }, 2000);
+        });
+        window.addEventListener('feitian:calibration-skipped', () => {
+            this.calibrationMsg = 'No controller detected';
+            setTimeout(() => { this.calibrationMsg = ''; }, 2000);
+        });
+        window.addEventListener('feitian:calibration-reset', () => {
+            this.calibrationMsg = 'Calibration reset';
+            setTimeout(() => { this.calibrationMsg = ''; }, 2000);
+        });
     }
 
     _resize() {
@@ -46,6 +71,7 @@ export class HUD {
         this._drawAttitudeIndicator(ctx, state, w, h);
         this._drawTelemetry(ctx, state, w, h);
         this._drawControlsHint(ctx, w, h);
+        this._drawControllerStatus(ctx, w, h);
         this._drawCameraBadge(ctx, state, w, h);
     }
 
@@ -227,15 +253,44 @@ export class HUD {
         ctx.textAlign = 'left';
         const hints = [
             'W/S    Throttle',
-            '↑↓     Pitch',
-            '←→     Roll',
+            '\u2191\u2193     Pitch',
+            '\u2190\u2192     Roll',
             'A/D    Yaw',
             'V      FPV/3rd',
+            'C      Calibrate',
             'R      Reset',
         ];
         hints.forEach((hint, i) => {
             ctx.fillText(hint, x + 10, y + 18 + i * 18);
         });
+
+        ctx.restore();
+    }
+
+    // ── Controller status (top-left) ─────────────────────────
+
+    _drawControllerStatus(ctx, w, h) {
+        const x = 15;
+        const y = 15;
+
+        ctx.save();
+        ctx.font = 'bold 11px monospace';
+
+        if (this.calibrating) {
+            // Calibration indicator
+            const blink = Math.floor(performance.now() / 400) % 2 === 0;
+            ctx.fillStyle = blink ? '#ffcc00' : '#ff8800';
+            ctx.fillText('⚙ CALIBRATING — ' + this.calibrationMsg, x, y + 12);
+        } else if (this.calibrationMsg) {
+            ctx.fillStyle = '#4f8';
+            ctx.fillText(this.calibrationMsg, x, y + 12);
+        } else if (this.controllerConnected) {
+            ctx.fillStyle = '#4f8';
+            const shortName = this.controllerName.length > 40
+                ? this.controllerName.slice(0, 37) + '...'
+                : this.controllerName;
+            ctx.fillText('🎮 ' + shortName, x, y + 12);
+        }
 
         ctx.restore();
     }

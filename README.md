@@ -1,7 +1,7 @@
 # FeiTian 飞天 🚁
 
 [![PyPI version](https://img.shields.io/pypi/v/feitian.svg)](https://pypi.org/project/feitian/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: GPLv3](https://img.shields.io/badge/license-GPLv3-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
 
 **飞天** — 多旋翼 FPV 无人机飞行模拟器。
@@ -110,7 +110,7 @@ FeiTian/
 
 ## 📄 许可
 
-MIT License © CodeOfMe
+GNU General Public License v3.0 © CodeOfMe
 
 ---
 

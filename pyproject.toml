@@ -7,7 +7,7 @@ name = "feitian"
 version = "0.1.0"
 description = "飞天 — 多旋翼无人机飞行模拟器 | Multi-rotor FPV drone flight simulator in your browser"
 readme = "README.md"
-license = {text = "MIT"}
+license = {text = "GPL-3.0-only"}
 authors = [
     {name = "CodeOfMe", email = "codeofme@proton.me"},
 ]
@@ -15,7 +15,7 @@ keywords = ["drone", "simulator", "fpv", "flight", "webgl", "threejs", "multi-ro
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: End Users/Desktop",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
