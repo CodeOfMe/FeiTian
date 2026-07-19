@@ -335,8 +335,6 @@ def flight():
                 disc.setPos(cx * .9, cy * .9, .18)
                 disc.setColor(*arm_colors[i]); disc.setTransparency(TransparencyAttrib.MAlpha)
                 disc.reparentTo(self.drone); self.rotors.append(disc)
-                guard.setPos(cx * .9, cy * .9, .18); guard.setHpr(0, 90, 0)
-                guard.setColor(.6, .6, .6); guard.reparentTo(self.drone)
 
             # Legs
             for a in [.5, 2.6, 3.7, 5.8]:
@@ -427,6 +425,9 @@ def flight():
     App().run()
 
 def main():
+    if '--fly' in sys.argv:
+        flight()
+        return
     app = QApplication(sys.argv)
     w = SetupWindow(); w.show()
     app.exec()
