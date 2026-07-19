@@ -15,7 +15,8 @@ S = _load()
 for k, v in {"mode": 2, "deadzone": .08, "smooth": .18, "rcThr": False,
              "ch": {"throttle": 0, "yaw": 2, "pitch": 3, "roll": 4},
              "inv": {"throttle": False, "yaw": False, "pitch": False, "roll": False},
-             "sub": {"throttle": 0, "yaw": 0, "pitch": 0, "roll": 0}}.items():
+             "sub": {"throttle": 0, "yaw": 0, "pitch": 0, "roll": 0},
+             "last_vid": "", "last_pid": ""}.items():
     S.setdefault(k, v)
 
 class HID:
@@ -59,6 +60,15 @@ class SetupWindow(QMainWindow):
         self.learn_data = None
         self.learn_start = 0
         self._build()
+        # Auto-restore last device
+        if S.get("last_vid") or S.get("last_pid"):
+            for i, d in enumerate(self.devices):
+                if d["vid"] == S["last_vid"] and d["pid"] == S["last_pid"]:
+                    self.dlist.setCurrentRow(i)
+                    hid_connect(int(d["vid"], 16), int(d["pid"], 16))
+                    self.dst.setText(f"Connected: {d['name']}")
+                    self.dst.setStyleSheet("color:#4c8;font-size:11px;")
+                    break
         self._timer = QTimer()
         self._timer.timeout.connect(self._live)
         self._timer.start(50)
@@ -152,6 +162,7 @@ class SetupWindow(QMainWindow):
 
         # ── Launch ──
         btn_fly = QPushButton("Start Flight"); btn_fly.setStyleSheet("background:#f8851f;color:#fff;font-size:16px;font-weight:bold;padding:10px;border:none;border-radius:6px;"); btn_fly.clicked.connect(self._go)
+        btn_fly.setShortcut("Return")
         lay.addWidget(btn_fly)
         hint = QLabel("W/S Throttle | Arrows Pitch/Roll | A/D Yaw | V View | R Reset | Esc Exit")
         hint.setAlignment(Qt.AlignCenter); hint.setStyleSheet("color:#555;font-size:10px;")
@@ -160,6 +171,7 @@ class SetupWindow(QMainWindow):
     def _sel(self, idx):
         if idx < 0 or idx >= len(self.devices): return
         d = self.devices[idx]; hid_connect(int(d["vid"], 16), int(d["pid"], 16))
+        S["last_vid"] = d["vid"]; S["last_pid"] = d["pid"]; _save(S)
         self.dst.setText(f"Connected: {d['name']}"); self.dst.setStyleSheet("color:#4c8;font-size:11px;")
     def _cc(self, k, v): S["ch"][k] = v; _save(S)
     def _ci(self, k, v): S["inv"][k] = v; _save(S)
