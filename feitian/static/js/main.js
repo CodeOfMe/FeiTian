@@ -176,6 +176,54 @@ function applyModeToInput() {
     inputState._smoothFactor = settings.smooth;
 }
 
+// ── WebSocket HID bridge ──────────────────────────────────────
+let hidWs = null;
+let hidPollTimer = null;
+let selectedDevice = null; // {vid, pid, name}
+
+function connectHID(vid, pid) {
+    if (hidWs && hidWs.readyState === WebSocket.OPEN) {
+        hidWs.send(JSON.stringify({action: 'close'}));
+        hidWs.close();
+    }
+    clearInterval(hidPollTimer);
+
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    hidWs = new WebSocket(`${proto}//${location.host}/ws/controller`);
+
+    hidWs.onopen = () => {
+        hidWs.send(JSON.stringify({action: 'open', vid, pid}));
+        // Poll for axis data at 50Hz
+        hidPollTimer = setInterval(() => {
+            if (hidWs && hidWs.readyState === WebSocket.OPEN) {
+                hidWs.send(JSON.stringify({action: 'poll'}));
+            }
+        }, 20);
+    };
+
+    hidWs.onmessage = (e) => {
+        try {
+            const msg = JSON.parse(e.data);
+            if (msg.status === 'data' && msg.axes && inputState) {
+                inputState.setExternalAxes(msg.axes);
+            }
+        } catch (err) {}
+    };
+
+    hidWs.onerror = () => { inputState && inputState.clearExternalAxes(); };
+    hidWs.onclose = () => { inputState && inputState.clearExternalAxes(); };
+}
+
+function disconnectHID() {
+    clearInterval(hidPollTimer);
+    if (hidWs) {
+        try { hidWs.send(JSON.stringify({action: 'close'})); } catch(e) {}
+        hidWs.close();
+        hidWs = null;
+    }
+    inputState && inputState.clearExternalAxes();
+}
+
 async function loadDeviceList() {
     const list = $('#device-list');
     list.innerHTML = '<div class="device-scanning">正在扫描 USB / HID 设备...</div>';
@@ -204,11 +252,21 @@ async function loadDeviceList() {
         </div>
     `).join('');
 
-    // Selection
+    // Selection — connect HID if not a standard Gamepad
     list.querySelectorAll('.device-item').forEach(item => {
         item.addEventListener('click', () => {
             list.querySelectorAll('.device-item').forEach(x => x.classList.remove('selected'));
             item.classList.add('selected');
+            const idx = +item.dataset.idx;
+            const dev = devices[idx];
+            selectedDevice = dev;
+
+            // If Gamepad API already has a controller, skip HID
+            if (!inputState.gamepadConnected && dev.vid && dev.pid) {
+                connectHID(dev.vid, dev.pid);
+                $('#device-status').className = 'device-status ok';
+                $('#device-status').textContent = '已连接 HID: ' + dev.name;
+            }
         });
     });
 
@@ -240,21 +298,40 @@ function updateLauncherLive() {
     const status = $('#device-status');
     if (inputState.gamepadConnected) {
         status.className = 'device-status ok';
-        status.textContent = '已连接: ' + inputState.gamepadName;
+        status.textContent = '已连接 Gamepad: ' + inputState.gamepadName;
+    } else if (inputState._extConnected) {
+        status.className = 'device-status ok';
+        status.textContent = '已连接 HID 设备（原始读取）';
     }
 
-    // Live axis bars
-    if (inputState.gamepadConnected) {
+    // Live axis bars — use external HID data if available, else gamepad
+    const axes = inputState._extAxes;
+    if (axes) {
+        // External HID axes: [throttle, yaw, pitch, roll]
+        const names = ['throttle','yaw','pitch','roll'];
+        names.forEach((name, i) => {
+            const v = axes[i] || 0;
+            const bar = $('#bar-' + name);
+            const val = $('#val-' + name);
+            const pct = Math.round((v + 1) * 50);
+            if (v >= 0) {
+                bar.style.left = '50%';
+                bar.style.width = (v * 50) + '%';
+            } else {
+                bar.style.left = (50 + v * 50) + '%';
+                bar.style.width = (-v * 50) + '%';
+            }
+            val.textContent = v.toFixed(2);
+        });
+    } else if (inputState.gamepadConnected) {
         const gp = navigator.getGamepads()[inputState._gpIndex];
         if (gp && gp.axes) {
             ['throttle','yaw','pitch','roll'].forEach(name => {
                 const idx = inputState._axisMap[name] ?? ({throttle:1,yaw:0,pitch:3,roll:2}[name]);
                 const raw = (idx < gp.axes.length) ? gp.axes[idx] : 0;
                 const clamped = Math.max(-1, Math.min(1, raw));
-                const pct = Math.round((clamped + 1) * 50);
                 const bar = $('#bar-' + name);
                 const val = $('#val-' + name);
-
                 if (clamped >= 0) {
                     bar.style.left = '50%';
                     bar.style.width = (clamped * 50) + '%';

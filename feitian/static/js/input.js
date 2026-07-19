@@ -117,6 +117,10 @@ export class InputState {
         this.hintMsg = '';
         this.hidDevices = []; // from backend scan
 
+        // External HID data (via WebSocket)
+        this._extAxes = null;  // [t, y, p, r] from external HID reader
+        this._extConnected = false;
+
         // ── Load saved calibration ─────────────────────────────
         this._loadCalibration();
 
@@ -378,6 +382,14 @@ export class InputState {
             }
         }
 
+        // External HID axes (from WebSocket) override everything
+        if (this._extAxes) {
+            this._target.throttle = this._extAxes[0];
+            this._target.yaw      = this._extAxes[1];
+            this._target.pitch    = -this._extAxes[2];
+            this._target.roll     = this._extAxes[3];
+        }
+
         // Exponential smoothing
         const a = 1 - Math.exp(-this._smoothFactor * 60 * Math.min(dt, 0.05));
         this.throttle += (this._target.throttle - this.throttle) * a;
@@ -392,6 +404,17 @@ export class InputState {
         stateInput.pitch    = this.pitch;
         stateInput.roll     = this.roll;
         stateInput.yaw      = this.yaw;
+    }
+
+    /** Feed axis data from external HID reader (WebSocket). axes = [t, y, p, r] each [-1,1] */
+    setExternalAxes(axes) {
+        this._extAxes = axes;
+        this._extConnected = true;
+    }
+
+    clearExternalAxes() {
+        this._extAxes = null;
+        this._extConnected = false;
     }
 
     /** Query backend for HID devices at the OS level */
