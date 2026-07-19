@@ -124,22 +124,27 @@ def _scan_hidapi() -> list[dict]:
         return []
 
     controllers: list[dict] = []
+    skip_kw = ["mouse", "keyboard", "touchpad", "touchscreen", "pen", "digitizer",
+               "multitouch", "button over interrupt", "sensor", "radio", "infrared",
+               "system control", "consumer control", "vendor-defined"]
     try:
         for dev in hid.enumerate():
             vid = f"{dev['vendor_id']:04X}"
             pid = f"{dev['product_id']:04X}"
             name = dev.get("product_string", "") or f"HID {vid}:{pid}"
+            mfr = dev.get("manufacturer_string", "") or ""
 
-            lower = name.lower()
-            if any(kw in lower for kw in ["mouse", "keyboard"]):
+            # Skip obvious non-controllers
+            lower = (name + " " + mfr).lower()
+            if any(kw in lower for kw in skip_kw):
                 continue
 
             controllers.append({
                 "name": name,
                 "vid": vid,
                 "pid": pid,
-                "manufacturer": dev.get("manufacturer_string", ""),
-                "path": dev.get("path", b"").decode("utf-8", errors="replace") if isinstance(dev.get("path"), bytes) else str(dev.get("path", "")),
+                "manufacturer": mfr,
+                "path": str(dev.get("path", "")),
             })
     except Exception:
         pass
@@ -172,22 +177,35 @@ def scan_controllers() -> list[dict]:
     """
     Scan for connected HID controllers.
 
-    Returns a list of dicts with keys: name, vid, pid
-    (and optionally: instance_id, manufacturer, path)
+    hidapi first (~50ms), PowerShell fallback if too few results.
     """
-    if sys.platform == "win32":
-        result = _scan_windows_powershell()
-        if result:
-            return result
-
-    # Cross-platform fallbacks
     result = _scan_hidapi()
-    if result:
-        return result
 
-    if sys.platform.startswith("linux"):
+    # Explicitly probe known RC controller VIDs that hidapi may miss
+    # (custom HID usage_page devices like PhoenixRC)
+    KNOWN_RC = [
+        (0x1781, 0x0898, "RC Simulator - PhoenixRC Controller"),
+        (0x1781, 0x0938, "PhoenixRC USB Interface"),
+    ]
+    seen = {(r["vid"], r["pid"]) for r in result}
+    try:
+        import hid
+        for vid, pid, name in KNOWN_RC:
+            if (f"{vid:04X}", f"{pid:04X}") not in seen:
+                devs = hid.enumerate(vid, pid)
+                if devs:
+                    result.append({
+                        "name": name,
+                        "vid": f"{vid:04X}",
+                        "pid": f"{pid:04X}",
+                        "manufacturer": "",
+                        "path": "",
+                    })
+                    seen.add((f"{vid:04X}", f"{pid:04X}"))
+    except ImportError:
+        pass
+
+    if not result and sys.platform.startswith("linux"):
         result = _scan_linux_lsusb()
-        if result:
-            return result
 
-    return []
+    return result

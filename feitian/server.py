@@ -22,7 +22,7 @@ DEFAULT_PORT = 9999
 
 
 def _get_port() -> int:
-    """Try default port 9999; if occupied, prompt user for another."""
+    """Try default port 9999; if occupied, fall back to random or prompt."""
     port = DEFAULT_PORT
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
@@ -32,21 +32,31 @@ def _get_port() -> int:
     except OSError:
         s.close()
 
-    while True:
-        try:
-            alt = input(f"  端口 {port} 被占用，请输入新端口: ").strip()
-            if not alt:
-                continue
-            port = int(alt)
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.bind(("127.0.0.1", port))
-            s.close()
-            return port
-        except ValueError:
-            print("  请输入有效数字")
-        except OSError:
-            print(f"  端口 {port} 也被占用")
-            s.close()
+    # 9999 occupied — try prompt, fall back to random
+    if sys.stdin.isatty():
+        while True:
+            try:
+                alt = input(f"  端口 {port} 被占用，请输入新端口: ").strip()
+                if not alt:
+                    continue
+                port = int(alt)
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.bind(("127.0.0.1", port))
+                s.close()
+                return port
+            except ValueError:
+                print("  请输入有效数字")
+            except OSError:
+                print(f"  端口 {port} 也被占用")
+                s.close()
+    else:
+        # Non-interactive — pick a random free port
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+        s.close()
+        print(f"  端口 {DEFAULT_PORT} 被占用，自动使用 {port}", flush=True)
+        return port
 
 
 def create_app() -> FastAPI:
