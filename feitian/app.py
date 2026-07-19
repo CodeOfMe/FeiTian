@@ -56,7 +56,7 @@ class App(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
         self.setBackgroundColor(.1,.1,.18,1);self.disableMouse()
-        self.devices=scan_controllers();self.setup_done=False
+        self.devlist=scan_controllers();self.setup_done=False
         self._build_setup()
         self.learn=False;self.ld=None;self.ls=0
         self.taskMgr.add(self._setup_tick,'setup_tick')
@@ -64,61 +64,61 @@ class App(ShowBase):
     def _build_setup(self):
         bg=(.08,.08,.18,1);fg=(1,1,1,1);ac=(.97,.52,.12,1);dk=(.12,.12,.24,1);tx=(.6,.6,.7,1)
         # Title
-        DirectLabel(text="FeiTian 飞天",scale=.12,pos=(0,0,.85),text_fg=ac,frameColor=(0,0,0,0))
-        DirectLabel(text="FPV Drone Flight Simulator",scale=.05,pos=(0,0,.76),text_fg=tx,frameColor=(0,0,0,0))
+        DirectLabel(text="FeiTian",scale=.12,pos=(0,0,.85),text_fg=ac,frameColor=(0,0,0,0))
+        DirectLabel(text="FPV Drone Simulator",scale=.05,pos=(0,0,.76),text_fg=tx,frameColor=(0,0,0,0))
 
         # Device list
-        DirectLabel(text="控制器",scale=.06,pos=(-.65,0,.66),text_fg=fg,text_align=TextNode.A_left,frameColor=(0,0,0,0))
-        items=[f"{d['name']}  [{d['vid']}:{d['pid']}]" for d in self.devices]
+        DirectLabel(text="Controllers",scale=.06,pos=(-.65,0,.66),text_fg=fg,text_align=TextNode.A_left,frameColor=(0,0,0,0))
+        items=[f"{d['name']}  [{d['vid']}:{d['pid']}]" for d in self.devlist]
         self.dlist=DirectScrolledList(
             parent=self.aspect2d,pos=(-.65,0,.3),frameSize=(-.05,.55,-.05,.35),
             numItemsVisible=5,items=items,itemFrame_frameSize=(-.02,.48,-.02,.05),
             itemFrame_frameColor=dk,forceHeight=.07,incButton_pos=(.5,0,-.33),
             decButton_pos=(.5,0,.33))
-        self.dlist.addItem("键盘操控（无控制器）")
-        self.dev_status=DirectLabel(text=f"检测到 {len(self.devices)} 个设备",scale=.04,pos=(-.65,0,-.15),text_fg=(.3,.8,.3,1),text_align=TextNode.A_left,frameColor=(0,0,0,0))
-        DirectButton(text="重新扫描",scale=.045,pos=(-.15,0,-.15),command=self._rescan,frameColor=dk,text_fg=fg,borderWidth=(1,1))
+        self.dlist.addItem("键盘操控（无Controllers）")
+        self.dev_status=DirectLabel(text=f"Found {len(self.devlist)}  devices",scale=.04,pos=(-.65,0,-.15),text_fg=(.3,.8,.3,1),text_align=TextNode.A_left,frameColor=(0,0,0,0))
+        DirectButton(text="Rescan",scale=.045,pos=(-.15,0,-.15),command=self._rescan,frameColor=dk,text_fg=fg,borderWidth=(1,1))
 
         # Channel mapping
-        DirectLabel(text="通道映射",scale=.06,pos=(.1,0,.66),text_fg=fg,text_align=TextNode.A_left,frameColor=(0,0,0,0))
+        DirectLabel(text="Channel Map",scale=.06,pos=(.1,0,.66),text_fg=fg,text_align=TextNode.A_left,frameColor=(0,0,0,0))
         self.raw_label=DirectLabel(text="RAW: -- "*8,scale=.04,pos=(.1,0,.6),text_fg=ac,text_align=TextNode.A_left,frameColor=(0,0,0,0))
         self.centries={};self.cinverts={};self.csubs={}
-        ch_labels=[("throttle","油门"),("yaw","偏航"),("pitch","俯仰"),("roll","横滚")]
+        ch_labels=[("throttle","Throttle"),("yaw","Yaw"),("pitch","Pitch"),("roll","Roll")]
         for i,(key,lb) in enumerate(ch_labels):
             y=.52-i*.09
             DirectLabel(text=lb,scale=.045,pos=(.1,0,y),text_fg=fg,text_align=TextNode.A_left,frameColor=(0,0,0,0))
             e=DirectEntry(scale=.04,pos=(.28,0,y-.005),width=3,numLines=1,initialText=str(S["ch"].get(key,0)),
                           frameColor=dk,text_fg=fg,focus=0,command=lambda txt,k=key:self._ch_changed(k,txt))
             self.centries[key]=e
-            cb=DirectCheckButton(text="反",scale=.04,pos=(.42,0,y),indicatorValue=S["inv"].get(key,False),
+            cb=DirectCheckButton(text="Inv",scale=.04,pos=(.42,0,y),indicatorValue=S["inv"].get(key,False),
                                   frameColor=(0,0,0,0),text_fg=tx,
                                   command=lambda val,k=key:self._inv_changed(k,val))
             self.cinverts[key]=cb
-            DirectLabel(text="中",scale=.035,pos=(.49,0,y),text_fg=tx,frameColor=(0,0,0,0))
+            DirectLabel(text="Sub",scale=.035,pos=(.49,0,y),text_fg=tx,frameColor=(0,0,0,0))
             se=DirectEntry(scale=.035,pos=(.55,0,y-.005),width=4,numLines=1,initialText=str(S["sub"].get(key,0)),
                            frameColor=dk,text_fg=fg,focus=0,command=lambda txt,k=key:self._sub_changed(k,txt))
             self.csubs[key]=se
-        DirectButton(text="自动检测通道",scale=.045,pos=(.5,0,.52-.36),command=self._learn_start,frameColor=dk,text_fg=ac,borderWidth=(1,1))
+        DirectButton(text="Auto-Detect",scale=.045,pos=(.5,0,.52-.36),command=self._learn_start,frameColor=dk,text_fg=ac,borderWidth=(1,1))
         self.learn_label=DirectLabel(text="",scale=.035,pos=(.5,0,.52-.42),text_fg=(.5,.5,.5,1),text_align=TextNode.A_left,frameColor=(0,0,0,0))
 
         # Settings
-        DirectLabel(text="参数",scale=.06,pos=(-.65,0,-.3),text_fg=fg,text_align=TextNode.A_left,frameColor=(0,0,0,0))
-        DirectLabel(text="死区",scale=.045,pos=(-.65,0,-.37),text_fg=tx,text_align=TextNode.A_left,frameColor=(0,0,0,0))
+        DirectLabel(text="Settings",scale=.06,pos=(-.65,0,-.3),text_fg=fg,text_align=TextNode.A_left,frameColor=(0,0,0,0))
+        DirectLabel(text="Deadzone",scale=.045,pos=(-.65,0,-.37),text_fg=tx,text_align=TextNode.A_left,frameColor=(0,0,0,0))
         self.dz_slider=DirectSlider(range=(0,30),value=int(S["deadzone"]*100),pos=(-.45,0,-.38),scale=.25,
                                      frameColor=dk,thumb_frameColor=ac,command=lambda:self._slider('deadzone'))
         self.dz_label=DirectLabel(text=str(int(S["deadzone"]*100)),scale=.04,pos=(-.2,0,-.38),text_fg=fg,frameColor=(0,0,0,0))
-        DirectLabel(text="平滑",scale=.045,pos=(-.65,0,-.46),text_fg=tx,text_align=TextNode.A_left,frameColor=(0,0,0,0))
+        DirectLabel(text="Smooth",scale=.045,pos=(-.65,0,-.46),text_fg=tx,text_align=TextNode.A_left,frameColor=(0,0,0,0))
         self.sm_slider=DirectSlider(range=(5,50),value=int(S["smooth"]*100),pos=(-.45,0,-.47),scale=.25,
                                      frameColor=dk,thumb_frameColor=ac,command=lambda:self._slider('smooth'))
         self.sm_label=DirectLabel(text=str(int(S["smooth"]*100)),scale=.04,pos=(-.2,0,-.47),text_fg=fg,frameColor=(0,0,0,0))
-        self.rc_cb=DirectCheckButton(text="RC油门（不自回中）",scale=.045,pos=(-.65,0,-.56),indicatorValue=S["rcThr"],
+        self.rc_cb=DirectCheckButton(text="RCThrottle（不自回Sub）",scale=.045,pos=(-.65,0,-.56),indicatorValue=S["rcThr"],
                                       text_fg=tx,frameColor=(0,0,0,0),
                                       command=lambda val:S.update({"rcThr":val}))
 
         # Launch
-        DirectButton(text="开始飞行",scale=.07,pos=(0,0,-.8),command=self._launch,frameColor=ac,text_fg=(1,1,1,1),
+        DirectButton(text="Start Flight",scale=.07,pos=(0,0,-.8),command=self._launch,frameColor=ac,text_fg=(1,1,1,1),
                      borderWidth=(1,1),frameSize=(-2.5,2.5,-.5,.5))
-        DirectLabel(text="W/S油门 ↑↓俯仰 ←→横滚 A/D偏航  V视角 R重置 Esc退出",scale=.035,pos=(0,0,-.93),
+        DirectLabel(text="W/SThrottle ↑↓Pitch ←→Roll A/DYaw  V视角 R重置 Esc退出",scale=.035,pos=(0,0,-.93),
                     text_fg=(.3,.3,.3,1),frameColor=(0,0,0,0))
 
     def _ch_changed(self,k,txt):
@@ -133,16 +133,16 @@ class App(ShowBase):
         if k=='deadzone':v=self.dz_slider['value'];S['deadzone']=v/100;self.dz_label['text']=str(int(v))
         else:v=self.sm_slider['value'];S['smooth']=v/100;self.sm_label['text']=str(int(v))
     def _rescan(self):
-        self.devices=scan_controllers()
-        items=[f"{d['name']}  [{d['vid']}:{d['pid']}]" for d in self.devices]
-        self.dlist['items']=items+["键盘操控（无控制器）"]
-        self.dev_status['text']=f"检测到 {len(self.devices)} 个设备"
+        self.devlist=scan_controllers()
+        items=[f"{d['name']}  [{d['vid']}:{d['pid']}]" for d in self.devlist]
+        self.dlist['items']=items+["键盘操控（无Controllers）"]
+        self.dev_status['text']=f"Found {len(self.devlist)}  devices"
     def _learn_start(self):
         if self.learn:self.learn=False;self._finish_learn();return
         self.learn=True;self.ld={i:{"min":255,"max":0}for i in range(16)};self.ls=time.time();self._learn_poll()
     def _learn_poll(self):
         if not self.learn:self.learn_label['text']="";return
-        t=time.time()-self.ls;self.learn_label['text']=f"学习中... {max(0,5-t):.1f}s  摇杆画圈！"
+        t=time.time()-self.ls;self.learn_label['text']=f"学习Sub... {max(0,5-t):.1f}s  move sticks!！"
         if t>5:self._learn_start();return
         hid.poll()
         for i,b in enumerate(hid.raw):
@@ -153,7 +153,7 @@ class App(ShowBase):
         t4=[x[0]for x in r[:4]]
         for i,k in enumerate(["throttle","yaw","pitch","roll"]):
             S["ch"][k]=t4[i]if i<len(t4)else i*2;self.centries[k].set(str(S["ch"][k]))
-        _save(S);self.learn_label['text']=f"完成！映射: {t4}"
+        _save(S);self.learn_label['text']=f"Done! Map: {t4}"
     def _setup_tick(self,task):
         if self.setup_done:return task.done
         if not self.learn:
@@ -161,9 +161,9 @@ class App(ShowBase):
             if hid.ok:self.raw_label['text']="RAW: "+" ".join(f"{b:02X}"for b in hid.raw)
         # Check device selection
         sel=self.dlist.getSelectedIndex()
-        if sel is not None and sel<len(self.devices):
-            d=self.devices[sel];hid_connect(int(d["vid"],16),int(d["pid"],16))
-            self.dev_status['text']=f"已连接: {d['name']}"
+        if sel is not None and sel<len(self.devlist):
+            d=self.devlist[sel];hid_connect(int(d["vid"],16),int(d["pid"],16))
+            self.dev_status['text']=f"Connected: {d['name']}"
         return task.cont
     def _launch(self):
         self.setup_done=True
