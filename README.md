@@ -6,7 +6,7 @@
 
 **飞天** — 多旋翼 FPV 无人机飞行模拟器。
 
-一个基于 WebGL (Three.js) 的无人机飞行模拟器，通过 pywebview 打包为原生桌面应用。支持键盘和游戏手柄操控，提供第三人称和 FPV 视角。
+一个基于 WebGL (Three.js) 的无人机飞行模拟器，运行在 Firefox 浏览器中。支持键盘和游戏手柄操控，提供第三人称和 FPV 视角。
 
 ---
 
@@ -17,7 +17,7 @@
 - 👁️ **双视角** — 第三人称平滑跟随 + FPV 第一人称
 - 📊 **完整 HUD** — 人工地平线、高度计、垂直速度、油门、姿态角
 - 🌳 **3D 场景** — 程序化地形、树木、发射台
-- 🖥️ **原生桌面** — pywebview 窗口，跨平台 (Windows/macOS/Linux)
+- 🦊 **Firefox 浏览器** — 自动查找并启动 Firefox，零额外依赖
 
 ---
 
@@ -62,7 +62,7 @@ python -m feitian
 | 物理     | 自研多旋翼动力学引擎              |
 | 前端     | 原生 HTML5 Canvas + ES Modules    |
 | 后端     | FastAPI + uvicorn                 |
-| 桌面包装 | pywebview (系统原生 WebView)      |
+| 桌面启动 | Firefox / 系统默认浏览器            |
 | 构建     | Hatchling                         |
 
 ---

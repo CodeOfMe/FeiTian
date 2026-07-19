@@ -1,17 +1,16 @@
 """
-FeiTian server — FastAPI backend + pywebview desktop window.
-
-Starts a FastAPI server on a random port, serves the WebGL flight simulator
-frontend, then opens a native WebView window pointing at it.
+FeiTian server — FastAPI backend, serves the WebGL flight simulator,
+opens Firefox browser.
 """
 
 import os
 import socket
+import subprocess
+import sys
 import threading
 from pathlib import Path
 
 import uvicorn
-import webview
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -22,14 +21,38 @@ STATIC_DIR = Path(__file__).parent / "static"
 
 
 def _find_free_port() -> int:
-    """Find a free TCP port on localhost."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(("127.0.0.1", 0))
         return s.getsockname()[1]
 
 
+def _find_firefox() -> str | None:
+    """Locate Firefox executable on this system."""
+    candidates = []
+    if sys.platform == "win32":
+        candidates = [
+            os.path.expandvars(r"%ProgramFiles%\Mozilla Firefox\firefox.exe"),
+            os.path.expandvars(r"%ProgramFiles(x86)%\Mozilla Firefox\firefox.exe"),
+            os.path.expandvars(r"%LocalAppData%\Mozilla Firefox\firefox.exe"),
+        ]
+    elif sys.platform == "darwin":
+        candidates = ["/Applications/Firefox.app/Contents/MacOS/firefox"]
+    else:
+        for name in ("firefox", "firefox-esr", "firefox-nightly"):
+            try:
+                subprocess.run(["which", name], capture_output=True, check=True)
+                return name
+            except Exception:
+                pass
+        return None
+
+    for path in candidates:
+        if os.path.isfile(path):
+            return path
+    return None
+
+
 def create_app() -> FastAPI:
-    """Build the FastAPI application, mounting the static directory."""
     app = FastAPI(title="FeiTian", docs_url=None, redoc_url=None)
 
     @app.get("/")
@@ -38,17 +61,15 @@ def create_app() -> FastAPI:
 
     @app.get("/api/controllers")
     async def list_controllers() -> JSONResponse:
-        """Scan for connected HID controllers / RC transmitters."""
         controllers = scan_controllers()
         return JSONResponse(content={"controllers": controllers})
 
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
-
     return app
 
 
 def main() -> None:
-    """Start the FeiTian simulator."""
+    """Start FeiTian simulator — opens in Firefox."""
     port = _find_free_port()
     app = create_app()
 
@@ -60,15 +81,25 @@ def main() -> None:
     )
     server_thread.start()
 
-    webview.create_window(
-        title="FeiTian 飞天 — FPV Drone Simulator",
-        url=f"http://127.0.0.1:{port}",
-        width=1280,
-        height=720,
-        min_size=(800, 600),
-        resizable=True,
-        fullscreen=False,
-        easy_drag=False,
-    )
+    url = f"http://127.0.0.1:{port}"
+    print(f"[FeiTian] Server: {url}")
 
-    webview.start(debug=False)
+    firefox = _find_firefox()
+    if firefox:
+        print(f"[FeiTian] Launching Firefox: {firefox}")
+        subprocess.Popen([firefox, url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    else:
+        print("[FeiTian] Firefox not found, opening with default browser...")
+        if sys.platform == "win32":
+            os.startfile(url)
+        else:
+            import webbrowser
+            webbrowser.open(url)
+
+    print("[FeiTian] Running. Press Ctrl+C to stop.")
+    try:
+        import time
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("[FeiTian] Shutting down.")
