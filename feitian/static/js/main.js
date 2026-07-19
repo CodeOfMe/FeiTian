@@ -16,7 +16,7 @@ const simulator = $('#simulator');
 const SETTINGS_KEY = 'feitian_settings';
 const DEVICE_KEY = 'feitian_selected_device';
 let settings = { mode: 2, rcThrottle: false, deadzone: 0.08, smooth: 0.18,
-    chanMap: { throttle:0, yaw:2, pitch:4, roll:6 },
+    chanMap: { throttle:0, yaw:2, pitch:3, roll:4 },
     chanInvert: { throttle:false, yaw:false, pitch:false, roll:false },
     chanSubtrim: { throttle:0, yaw:0, pitch:0, roll:0 },
     chanEndpointL: { throttle:100, yaw:100, pitch:100, roll:100 },
@@ -157,7 +157,7 @@ function initLauncher() {
 
     // ── Reset mapping ────────────────────────────────────
     $('#btn-calib-reset').addEventListener('click', () => {
-        settings.chanMap = { throttle:0, yaw:2, pitch:4, roll:6 };
+        settings.chanMap = { throttle:0, yaw:2, pitch:3, roll:4 };
         settings.chanInvert = { throttle:false, yaw:false, pitch:false, roll:false };
         settings.chanSubtrim = { throttle:0, yaw:0, pitch:0, roll:0 };
         settings.chanEndpointL = { throttle:100, yaw:100, pitch:100, roll:100 };

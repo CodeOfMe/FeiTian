@@ -44,7 +44,7 @@ class HIDReader:
         try:
             self._dev = hid.device()
             self._dev.open(self.vid, self.pid)
-            self._dev.set_nonblocking(True)
+            self._dev.set_nonblocking(False)  # blocking for reliable reads
             self.connected = True
             self._running = True
             self._thread = threading.Thread(target=self._read_loop, daemon=True)
@@ -70,11 +70,13 @@ class HIDReader:
         """Continuously read HID reports, decode axes."""
         while self._running and self._dev:
             try:
-                data = self._dev.read(64, timeout_ms=50)
+                data = self._dev.read(64, timeout_ms=100)
                 if data and len(data) >= 8:
                     self._decode(data)
+                elif data:
+                    pass  # short packet, ignore
             except Exception:
-                time.sleep(0.01)
+                time.sleep(0.005)
 
     def _decode(self, data: bytes):
         """
@@ -94,10 +96,10 @@ class HIDReader:
         Maps 0x00→-1.0, 0x7F→0.0, 0xFF→+1.0.
         """
         axes_raw = [
-            data[0],   # axis 0
-            data[2],   # axis 1
-            data[4],   # axis 2
-            data[6],   # axis 3
+            data[0],
+            data[2],
+            data[3],  # corrected: PhoenixRC axes are at bytes 0,2,3,4
+            data[4],
         ]
 
         with self._lock:
