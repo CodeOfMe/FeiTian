@@ -18,10 +18,35 @@ from feitian.hid_reader import start_reader, stop_reader, get_reader
 STATIC_DIR = Path(__file__).parent / "static"
 
 
-def _find_free_port() -> int:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(("127.0.0.1", 0))
-        return s.getsockname()[1]
+DEFAULT_PORT = 9999
+
+
+def _get_port() -> int:
+    """Try default port 9999; if occupied, prompt user for another."""
+    port = DEFAULT_PORT
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.bind(("127.0.0.1", port))
+        s.close()
+        return port
+    except OSError:
+        s.close()
+
+    while True:
+        try:
+            alt = input(f"  端口 {port} 被占用，请输入新端口: ").strip()
+            if not alt:
+                continue
+            port = int(alt)
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.bind(("127.0.0.1", port))
+            s.close()
+            return port
+        except ValueError:
+            print("  请输入有效数字")
+        except OSError:
+            print(f"  端口 {port} 也被占用")
+            s.close()
 
 
 def create_app() -> FastAPI:
@@ -84,7 +109,7 @@ def main() -> None:
     """Start FeiTian headless — prints the URL, stays running."""
     sys.stdout.reconfigure(encoding="utf-8")
 
-    port = _find_free_port()
+    port = _get_port()
     app = create_app()
     url = f"http://127.0.0.1:{port}"
 
