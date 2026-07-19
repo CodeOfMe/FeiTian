@@ -26,3 +26,5 @@ Thumbs.db
 node_modules/
 .reasonix/
 feitian.log
+*.bat
+feitian_error.log
