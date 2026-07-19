@@ -73,7 +73,7 @@ class App(ShowBase):
         self.dlist=DirectScrolledList(
             parent=self.aspect2d,pos=(-.65,0,.3),frameSize=(-.05,.55,-.05,.35),
             numItemsVisible=5,items=items,itemFrame_frameSize=(-.02,.48,-.02,.05),
-            itemFrame_frameColor=dk,forceHeight=.07,highlightColor=ac,incButton_pos=(.5,0,-.33),
+            itemFrame_frameColor=dk,forceHeight=.07,incButton_pos=(.5,0,-.33),
             decButton_pos=(.5,0,.33))
         self.dlist.addItem("键盘操控（无控制器）")
         self.dev_status=DirectLabel(text=f"检测到 {len(self.devices)} 个设备",scale=.04,pos=(-.65,0,-.15),text_fg=(.3,.8,.3,1),text_align=TextNode.A_left,frameColor=(0,0,0,0))
