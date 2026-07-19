@@ -45,7 +45,7 @@ def hid_connect(vid, pid):
 # ═══════════ PYSIDE6 SETUP ═══════════
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
     QHBoxLayout, QLabel, QPushButton, QListWidget, QSpinBox, QCheckBox,
-    QSlider, QGroupBox, QLineEdit, QListWidgetItem)
+    QSlider, QGroupBox, QLineEdit, QListWidgetItem, QProgressBar)
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont, QColor, QPalette
 
@@ -53,7 +53,7 @@ class SetupWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("FeiTian — Setup")
-        self.setFixedSize(560, 620)
+        self.setFixedSize(620, 680)
         self.devices = scan_controllers()
         self.learning = False
         self.learn_data = None
@@ -110,16 +110,20 @@ class SetupWindow(QMainWindow):
         self.raw_label = QLabel("RAW: -- -- -- -- -- -- -- --")
         self.raw_label.setStyleSheet("color:#f8851f;font-family:Consolas;font-size:11px;")
         g2l.addWidget(self.raw_label)
-        self.cspin = {}; self.cinv = {}; self.csub = {}
+        self.cspin = {}; self.cinv = {}; self.csub = {}; self.cbar = {}; self.cval = {}
         for key, lb in [("throttle", "Throttle"), ("yaw", "Yaw"), ("pitch", "Pitch"), ("roll", "Roll")]:
             rw = QHBoxLayout()
             rw.addWidget(QLabel(lb)); lbw = rw.itemAt(0).widget(); lbw.setFixedWidth(55); lbw.setStyleSheet("color:#ccc;")
             sp = QSpinBox(); sp.setRange(0, 15); sp.setValue(S["ch"].get(key, 0)); sp.setStyleSheet("background:#1c1c32;color:#ccc;border:1px solid #444;"); sp.setFixedWidth(50); sp.valueChanged.connect(lambda v, k=key: self._cc(k, v))
             rw.addWidget(sp); self.cspin[key] = sp
+            bar = QProgressBar(); bar.setRange(0, 1000); bar.setValue(500); bar.setTextVisible(False)
+            bar.setFixedHeight(14); bar.setStyleSheet("QProgressBar{background:#111128;border:1px solid #333;border-radius:2px;} QProgressBar::chunk{background:#f8851f;border-radius:2px;}")
+            rw.addWidget(bar); self.cbar[key] = bar
+            val = QLabel("0.00"); val.setFixedWidth(38); val.setStyleSheet("color:#ddd;font-family:Consolas;font-size:10px;")
+            rw.addWidget(val); self.cval[key] = val
             cb = QCheckBox("Rev"); cb.setChecked(S["inv"].get(key, False)); cb.setStyleSheet("color:#888;"); cb.toggled.connect(lambda v, k=key: self._ci(k, v))
             rw.addWidget(cb); self.cinv[key] = cb
-            rw.addWidget(QLabel("Sub")); rw.itemAt(rw.count()-1).widget().setStyleSheet("color:#888;")
-            le = QLineEdit(str(S["sub"].get(key, 0))); le.setFixedWidth(40); le.setStyleSheet("background:#1c1c32;color:#ccc;border:1px solid #444;"); le.editingFinished.connect(lambda k=key, e=le: self._cs(k, e))
+            le = QLineEdit(str(S["sub"].get(key, 0))); le.setFixedWidth(36); le.setStyleSheet("background:#1c1c32;color:#ccc;border:1px solid #444;"); le.editingFinished.connect(lambda k=key, e=le: self._cs(k, e))
             rw.addWidget(le); self.csub[key] = le
             rw.addStretch()
             g2l.addLayout(rw)
@@ -192,7 +196,16 @@ class SetupWindow(QMainWindow):
     def _live(self):
         if not self.learning:
             hid.poll()
-            if hid.ok: self.raw_label.setText("RAW: " + " ".join(f"{b:02X}" for b in hid.raw))
+            if hid.ok:
+                self.raw_label.setText("RAW: " + " ".join(f"{b:02X}" for b in hid.raw))
+                for key in ["throttle", "yaw", "pitch", "roll"]:
+                    bi = S["ch"].get(key, 0)
+                    v = ((hid.raw[bi] if bi < len(hid.raw) else 127) - 127) / 127
+                    v += S["sub"].get(key, 0) / 127
+                    if S["inv"].get(key, False): v = -v
+                    v = max(-1, min(1, v))
+                    self.cbar[key].setValue(int((v + 1) * 500))
+                    self.cval[key].setText(f"{v:.2f}")
     def _go(self):
         for k in ["throttle", "yaw", "pitch", "roll"]:
             S["ch"][k] = self.cspin[k].value()
