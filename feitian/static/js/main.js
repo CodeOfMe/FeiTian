@@ -441,9 +441,9 @@ function updateLauncherLive() {
 
 function navigateTo(view, push = true) {
     if (push) {
-        history.pushState({ view }, '', view === 'flight' ? '#flight' : '#launcher');
+        history.pushState({ view }, '', view === 'flight' ? '#flight' : '#setup');
     } else {
-        history.replaceState({ view }, '', view === 'flight' ? '#flight' : '#launcher');
+        history.replaceState({ view }, '', view === 'flight' ? '#flight' : '#setup');
     }
     _showView(view);
 }
@@ -475,7 +475,7 @@ window.addEventListener('popstate', (e) => {
 });
 
 // On initial load, use replaceState so we don't create an extra history entry
-history.replaceState({ view: 'launcher' }, '', '#launcher');
+history.replaceState({ view: 'launcher' }, '', '#setup');
 
 // ═══════════════════════════════════════════════════════════════
 // SIMULATOR
